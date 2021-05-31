@@ -70,6 +70,24 @@ var awaiter = (this && this.__awaiter) || function (/** @type {any} */ thisArg, 
 function main(parameters) {
 	awaiter(this, void 0, void 0, function* () {
 		let input = yield showClassInput();
+		input = cleanInput(input);
+
+		let inputData = parseInput(input);
+		if (typeof (inputData) == "string") {
+			VSCode.window.showErrorMessage(
+				"Wrong type provided - \"" + inputData + "\". Must be \"class\" or \"struct\"."
+			);
+			return;
+		}
+		else if (inputData && !inputData.class) {
+			VSCode.window.showErrorMessage(
+				"Input doesn't contains definition of the \"class\" or \"struct\"."
+			);
+			return;
+		}
+		else if (!inputData) {
+			return;
+		}
 	});
 }
 
@@ -99,4 +117,86 @@ function showPathInput() {
 		};
 		return yield VSCode.window.showInputBox(option);
 	});
+}
+
+/**
+ * @param {string} input
+ * @returns {string}
+ */
+function cleanInput(input) {
+	if (!input) { return; }
+
+	input = input.replace(/[^\w\d\s,_:<>]+/gi, "");
+	input = input.replace(/[\s\t]+/gi, " ").trim();
+	return input;
+}
+
+/**
+ * @param {string} input
+ * @returns {{
+ * namespace: string | null;
+ * template: string | null;
+ * parent: string | null;
+ * class: string | null;
+ * type: string | null;
+ * } | string | null}
+ */
+function parseInput(input) {
+	if (!input) { return null; }
+
+	let type = (input + " ").slice(0, input.indexOf(" "));
+	if (!(type == "class" || type == "struct")) {
+		return type;
+	}
+	else if (input.split(" ").length < 2) {
+		return {
+			namespace: null,
+			template: null,
+			parent: null,
+			class: null,
+			type: type
+		};
+	}
+
+	input = input.replace(type, "").trim();
+
+	const namespaceRegex = input.match(/([\w\d\s_]+)::/);
+	const templateRegex = input.match(/<([\w\d\s_,]+)>/);
+	const parentRegex = input.match(/:([\w\d\s_,]+)$/);
+	const classRegex = input.match(/::([\w\d\s_,<>]+):/);
+
+	let namespace = null;
+	let template = null;
+	let parent = null;
+	let class_ = null;
+
+	if (namespaceRegex) {
+		namespace = namespaceRegex[1];
+	}
+	if (templateRegex) {
+		template = templateRegex[1];
+	}
+	if (parentRegex) {
+		parent = parentRegex[1];
+	}
+	if (classRegex) {
+		if (template) {
+			class_ = classRegex[1].replace("<" + template + ">", "");
+		}
+		else {
+			class_ = classRegex[1];
+		}
+	}
+
+	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => value == null)) {
+		class_ = input;
+	}
+
+	return {
+		namespace: namespace,
+		template: template,
+		parent: parent,
+		class: class_,
+		type: type
+	};
 }
