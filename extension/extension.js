@@ -68,4 +68,35 @@ var awaiter = (this && this.__awaiter) || function (/** @type {any} */ thisArg, 
  * @returns {void}
  */
 function main(parameters) {
+	awaiter(this, void 0, void 0, function* () {
+		let input = yield showClassInput();
+	});
+}
+
+/**
+ * @returns {void}
+*/
+function showClassInput() {
+	return awaiter(this, void 0, void 0, function* () {
+		var option = {
+			ignoreFocusOut: false,
+			placeHolder: "class Namespace::Class<T, U> : Parent, Interface",
+			prompt: "Provide what you want to create. Must contains \"class\" or \"struct\" keyword at the begining. Can be with namespace, template and parent class."
+		};
+		return VSCode.window.showInputBox(option);
+	});
+}
+
+/**
+ * @returns {void}
+*/
+function showPathInput() {
+	return awaiter(this, void 0, void 0, function* () {
+		var option = {
+			ignoreFocusOut: false,
+			placeHolder: "path/to/header; path/to/source",
+			prompt: "Provide in which folders files will be created. Should be relative to the root folder."
+		};
+		return yield VSCode.window.showInputBox(option);
+	});
 }
