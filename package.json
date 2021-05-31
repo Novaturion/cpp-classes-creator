@@ -1,0 +1,126 @@
+{
+	"name": "cpp-classes-creator",
+	"displayName": "C++ Classes Creator",
+	"description": "A better way to create C++ classes",
+	"publisher": "Novaturion",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.56.0"
+	},
+	"keywords": [
+		"C++",
+		"Cpp",
+		"New",
+		"Add",
+		"Make",
+		"Create",
+		"Class",
+		"Struct"
+	],
+	"categories": [
+		"Programming Languages"
+	],
+	"activationEvents": [
+		"onCommand:cpp-classes-creator.createCppClass"
+	],
+	"main": "./extension/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "cpp-classes-creator.createCppClass",
+				"title": "New C++ Class/Struct"
+			}
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"group": "navigation@-1",
+					"command": "cpp-classes-creator.createCppClass"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "cpp-classes-creator.createCppClass",
+				"key": "shift+alt+c",
+				"when": "editorTextFocus"
+			}
+		],
+		"languages": [
+			{
+				"id": "cpp",
+				"extensions": [
+					".h",
+					".hpp",
+					".cpp",
+					".cxx"
+				]
+			}
+		],
+		"configuration": [
+			{
+				"title": "C++ Classes Creator",
+				"properties": {
+					"C_Cpp.classesCreator.defaultHeadersFolder": {
+						"type": "string",
+						"default": null,
+						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if `splitByFolders` is false."
+					},
+					"C_Cpp.classesCreator.defaultSourcesFolder": {
+						"type": "string",
+						"default": null,
+						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if `splitByFolders` is false."
+					},
+					"C_Cpp.classesCreator.askFolder": {
+						"type": "boolean",
+						"default": false,
+						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If `splitByFolders` is true create two folders for source and header files. Ignored if called from context menu."
+					},
+					"C_Cpp.classesCreator.createFolder": {
+						"type": "boolean",
+						"default": true,
+						"description": "Create a folder for the class. If `splitByFolders` is true create two folders for source and header files."
+					},
+					"C_Cpp.classesCreator.splitByFolders": {
+						"type": "boolean",
+						"default": true,
+						"description": "Place header under `defaultHeadersFolder` folder and source file under `defaultSourceFolder`. If called from context menu header will be placed under cursor if default folders aren't specified."
+					},
+					"C_Cpp.classesCreator.useCppHeader": {
+						"type": "boolean",
+						"default": true,
+						"description": "Use *.hpp* instead of *.h*."
+					},
+					"C_Cpp.classesCreator.useCxxSource": {
+						"type": "boolean",
+						"default": true,
+						"description": "Use *.cxx* instead of *.cpp*."
+					},
+					"C_Cpp.classesCreator.headerGuard.usePragma": {
+						"type": "boolean",
+						"default": true,
+						"description": "Use *#pragma once*."
+					},
+					"C_Cpp.classesCreator.headerGuard.useDefine": {
+						"type": "boolean",
+						"default": false,
+						"description": "Use *#ifndef*."
+					}
+				}
+			}
+		]
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.56.0",
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.0.4",
+		"@types/node": "^12.11.7",
+		"glob": "^7.1.6",
+		"typescript": "^4.1.3"
+	}
+}
