@@ -222,32 +222,31 @@ function parseClassInput(input) {
 
 	input = input.replace(type, "").trim();
 
-	const namespaceRegex = input.match(/([\w\d\s_]+)::/);
-	const templateRegex = input.match(/<([\w\d\s_,]+)>/);
-	const parentRegex = input.match(/:([\w\d\s_,]+)$/);
-	const classRegex = input.match(/::([\w\d\s_,<>]+):/);
-
 	let namespace = null;
-	let template = null;
-	let parent = null;
-	let class_ = null;
-
+	const namespaceRegex = input.match(/([\w\d\s_]+)::/);
 	if (namespaceRegex) {
-		namespace = namespaceRegex[1];
+		namespace = namespaceRegex[1].trim();
+		input = input.replace(namespaceRegex[0], "");
 	}
+
+	let template = null;
+	const templateRegex = input.match(/<([\w\d\s_,]+)>/);
 	if (templateRegex) {
-		template = templateRegex[1];
+		template = templateRegex[1].trim();
+		input = input.replace(templateRegex[0], "");
 	}
+
+	let parent = null;
+	const parentRegex = input.match(/:([\w\d\s_,]+)$/);
 	if (parentRegex) {
-		parent = parentRegex[1];
+		parent = parentRegex[1].trim();
+		input = input.replace(parentRegex[0], "");
 	}
+
+	let class_ = null;
+	const classRegex = input.match(/([\w\d\s_]+)/);
 	if (classRegex) {
-		if (template) {
-			class_ = classRegex[1].replace("<" + template + ">", "");
-		}
-		else {
-			class_ = classRegex[1];
-		}
+		class_ = classRegex[1].trim();
 	}
 
 	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => value == null)) {
