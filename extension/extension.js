@@ -353,3 +353,72 @@ function splitByFolders(path, headers, sources) {
 	return { headers: path, sources: path };
 }
 
+/**
+ * @param {{
+ * 	namespace: string | null;
+ * 	template: string | null;
+ * 	parent: string | null;
+ * 	class: string | null;
+ * 	type: string | null;
+ * 	} | null} data
+ * @returns {string | null}
+ */
+function getHeader(data) {
+	if (!data || (data && !data.type) || (data && !data.class)) {
+		return null;
+	}
+
+	let lines = [data.type + " " + data.class];
+	if (data.template) {
+		lines.splice(0, 0, "template<class " + data.template.replace(/[\s]?,[\s]?/g, ", class ") + ">");
+	}
+
+	if (data.parent) {
+		lines[lines.length > 1 ? 1 : 0] += " : " + data.parent.replace(/[\s]?,[\s]?/g, ", ");
+	}
+
+	lines = lines.concat([
+		"{",
+		"\tpublic:",
+		"\t\t" + data.class + "() = default;\n",
+		"\t\t~" + data.class + "() = default;",
+		"};"
+	]);
+
+	if (data.namespace) {
+		for (let i = 0; i < lines.length; i++) {
+			lines[i] = "\t" + lines[i];
+		}
+		lines.splice(0, 0, "namespace " + data.namespace + "\n{");
+		lines.push("}")
+	}
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.headerGuard.useDefine")) {
+		let classUpper = data.class.toUpperCase();
+		lines.splice(0, 0, "#ifndef " + classUpper + "_H");
+		lines.splice(1, 0, "#define " + classUpper + "_H\n\n");
+		lines.push("#endif");
+	}
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.headerGuard.usePragma")) {
+		if (lines.indexOf("#endif") > -1) {
+			lines.splice(2, 0, "#pragma once\n\n")
+			lines[1] = lines[1].replace("\n\n", "")
+		}
+		else {
+			lines.splice(0, 0, "#pragma once\n\n");
+		}
+	}
+
+	let header = lines.join("\n");
+
+	return header;
+}
+
+/**
+ * @param {string} headerPath
+ */
+function getSource(headerPath) {
+	return "#include \"" + headerPath + "\n";
+}
+
