@@ -78,7 +78,7 @@
 					},
 					"C_Cpp.classesCreator.folder.createFolder": {
 						"type": "boolean",
-						"default": true,
+						"default": false,
 						"description": "Create a folder for the class. If `splitByFolders` is true create two folders for source and header files."
 					},
 					"C_Cpp.classesCreator.folder.splitByFolders": {
@@ -93,7 +93,7 @@
 					},
 					"C_Cpp.classesCreator.file.useCxxSource": {
 						"type": "boolean",
-						"default": true,
+						"default": false,
 						"description": "Use \".cxx\" instead of \".cpp\"."
 					},
 					"C_Cpp.classesCreator.headerGuard.usePragma": {
