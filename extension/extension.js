@@ -419,6 +419,59 @@ function getHeader(data) {
  * @param {string} headerPath
  */
 function getSource(headerPath) {
-	return "#include \"" + headerPath + "\n";
+
+/**
+ * @param {string[] | null} paths
+ * @returns {boolean}
+ */
+function makeFolders(...paths) {
+	if (!paths || paths &&
+		(paths.length < 1 || paths.every((path) => !path))
+	) {
+		return false;
+	}
+
+	for (let path of paths) {
+		if (!path) {
+			continue;
+		}
+
+		if (!FileSystem.existsSync(path)) {
+			FileSystem.mkdirSync(path, { recursive: true });
+		}
+	}
+	return true;
 }
 
+/**
+ * @param {{
+ * path: string | null;
+ * content: string | null;
+ * }[] | null[] | null} files
+ * @returns {boolean}
+ */
+function writeFiles(...files) {
+	if (!files || files &&
+		(files.length < 1 || files.every((data) => !data))
+	) {
+		return false;
+	}
+
+	for (const data of files) {
+		if (!data || data && !data.path) {
+			continue;
+}
+
+		FileSystem.writeFile(
+			data.path,
+			data.content ? data.content : "",
+			function (error) {
+				if (error) {
+					VSCode.window.showErrorMessage(error.message);
+					return false;
+				}
+			}
+		);
+	}
+	return true;
+}
