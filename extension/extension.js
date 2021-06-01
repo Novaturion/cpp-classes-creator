@@ -136,6 +136,13 @@ function main(parameters) {
 			(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource")
 				? ".cxx" : ".cpp")
 		);
+
+		if (makeFolders(Path.dirname(resultPaths.header), Path.dirname(resultPaths.source))) {
+			writeFiles(
+				{ path: resultPaths.header, content: getHeader(inputData) },
+				{ path: resultPaths.source, content: getSource(resultPaths.header) }
+			);
+		}
 	});
 }
 
