@@ -20,7 +20,19 @@ module.exports = {
 }
 
 // @ts-ignore
-var awaiter = (this && this.__awaiter) || function (/** @type {any} */ thisArg, /** @type {any} */ _arguments, /** @type {PromiseConstructor} */ P, /** @type {{ [x: string]: (arg0: any) => any; next: (arg0: any) => any; apply: (arg0: any, arg1: any) => any; }} */ generator) {
+var awaiter = (this && this.__awaiter) || function (
+	/** @type {any} */
+	thisArg,
+	/** @type {any} */
+	_arguments,
+	/** @type {PromiseConstructor} */
+	P,
+	/** @type {{
+	 * [x: string]: (arg0: any) => any;
+	 * next: (arg0: any) => any;
+	 * apply: (arg0: any, arg1: any) => any;
+	 * }} */
+	generator) {
 	/**
 	 * @param {any} value
 	 */
@@ -92,8 +104,8 @@ function main(parameters) {
 		}
 
 		let resultPaths = {
-			headers: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.defaultHeadersFolder"),
-			sources: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.defaultSourcesFolder")
+			headers: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeadersFolder"),
+			sources: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
 		};
 
 		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.askFolder")) {
@@ -119,7 +131,7 @@ function main(parameters) {
 			contextPath = fsPath;
 		}
 
-			if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.splitByFolders")) {
+			if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders")) {
 			const folders = splitByFolders(
 				contextPath,
 				resultPaths.sources ? resultPaths.headers : projectPaths.headers,
@@ -141,7 +153,7 @@ function main(parameters) {
 		}
 		}
 
-		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.createFolder")) {
+		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createFolder")) {
 			resultPaths.headers = Path.join(resultPaths.headers, inputData.class);
 			resultPaths.sources = Path.join(resultPaths.sources, inputData.class);
 		}
@@ -149,7 +161,7 @@ function main(parameters) {
 }
 
 /**
- * @returns {void}
+ * @returns {string | null}
 */
 function showClassInput() {
 	return awaiter(this, void 0, void 0, function* () {
@@ -163,14 +175,14 @@ function showClassInput() {
 }
 
 /**
- * @returns {void}
+ * @returns {string | null}
 */
 function showPathInput() {
 	return awaiter(this, void 0, void 0, function* () {
 		var option = {
 			ignoreFocusOut: false,
 			placeHolder: "path/to/header; path/to/source",
-			prompt: "Provide in which folders files will be created. Should be relative to the root folder."
+			prompt: "Provide in which folders files will be created. Must be relative to the root folder."
 		};
 		return yield VSCode.window.showInputBox(option);
 	});
@@ -186,10 +198,10 @@ function cleanInput(input, isPath) {
 		return;
 	}
 
-	const regex = isPath ? /[^\w\d\s_\-\\/;]+/gi : /[^\w\d\s,_:<>]+/gi;
+	const regex = isPath ? /[^\w\d\s_\-\\/;]+/g : /[^\w\d\s,_:<>]+/g;
 
 	input = input.replace(regex, "");
-	input = input.replace(/[\s\t]+/gi, " ").trim();
+	input = input.replace(/[\s\t]+/g, " ").trim();
 	return input;
 }
 
@@ -273,11 +285,13 @@ function parsePathInput(path) {
 	if (!path) {
 		return null;
 	}
-	path = Path.normalize(path.replace(/ [\\/]/gi, "/").replace(/[\\/] /gi, "/"));
+	path = Path.normalize(path.replace(/[\s]?[\\/][\s]?/g, "/"));
+
+	const rootPath = VSCode.workspace.workspaceFolders[0].uri.fsPath + Path.sep;
 	const paths = path.split(";");
 	return {
-		headers: paths[0].trim(),
-		sources: paths[1] ? paths[1].trim() : paths[0].trim(),
+		headers: rootPath + paths[0].trim(),
+		sources: rootPath + paths[1] ? paths[1].trim() : paths[0].trim(),
 	}
 }
 
@@ -323,16 +337,16 @@ function getProjectPaths() {
 function splitByFolders(path, headers, sources) {
 	if (!path) { return null; }
 
-	const rootPath = VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase();
-	headers = headers ? headers.replace(Path.normalize(rootPath + "/"), "") : "";
-	sources = sources ? sources.replace(Path.normalize(rootPath + "/"), "") : "";
+	const rootPath = VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase() + Path.sep;
+	headers = headers ? headers.replace(rootPath, "") + Path.sep : "";
+	sources = sources ? sources.replace(rootPath, "") + Path.sep : "";
 
 	if (path.includes(headers)) {
-		let difference = path.replace(Path.normalize(headers + "/"), "").replace(Path.normalize(rootPath + "/"), "");
+		let difference = path.replace(headers, "").replace(rootPath, "");
 		return { headers: path, sources: Path.join(rootPath, sources, difference) };
 	}
 	else if (path.includes(sources)) {
-		let difference = path.replace(Path.normalize(sources + "/"), "").replace(Path.normalize(rootPath + "/"), "");
+		let difference = path.replace(sources, "").replace(rootPath, "");
 		return { headers: Path.join(rootPath, headers, difference), sources: path };
 	}
 

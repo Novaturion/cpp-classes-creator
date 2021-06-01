@@ -61,50 +61,50 @@
 			{
 				"title": "C++ Classes Creator",
 				"properties": {
-					"C_Cpp.classesCreator.defaultHeadersFolder": {
+					"C_Cpp.classesCreator.folder.defaultHeadersFolder": {
 						"type": "string",
 						"default": null,
 						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if `splitByFolders` is false."
 					},
-					"C_Cpp.classesCreator.defaultSourcesFolder": {
+					"C_Cpp.classesCreator.folder.defaultSourcesFolder": {
 						"type": "string",
 						"default": null,
 						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if `splitByFolders` is false."
 					},
-					"C_Cpp.classesCreator.askFolder": {
+					"C_Cpp.classesCreator.folder.askFolder": {
 						"type": "boolean",
 						"default": false,
 						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If `splitByFolders` is true create two folders for source and header files. Ignored if called from context menu."
 					},
-					"C_Cpp.classesCreator.createFolder": {
+					"C_Cpp.classesCreator.folder.createFolder": {
 						"type": "boolean",
 						"default": true,
 						"description": "Create a folder for the class. If `splitByFolders` is true create two folders for source and header files."
 					},
-					"C_Cpp.classesCreator.splitByFolders": {
+					"C_Cpp.classesCreator.folder.splitByFolders": {
 						"type": "boolean",
 						"default": true,
 						"description": "Place header under `defaultHeadersFolder` folder and source file under `defaultSourceFolder`. If called from context menu header will be placed under cursor if default folders aren't specified."
 					},
-					"C_Cpp.classesCreator.useCppHeader": {
+					"C_Cpp.classesCreator.file.useCppHeader": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use *.hpp* instead of *.h*."
+						"description": "Use \".hpp\" instead of \".h\"."
 					},
-					"C_Cpp.classesCreator.useCxxSource": {
+					"C_Cpp.classesCreator.file.useCxxSource": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use *.cxx* instead of *.cpp*."
+						"description": "Use \".cxx\" instead of \".cpp\"."
 					},
 					"C_Cpp.classesCreator.headerGuard.usePragma": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use *#pragma once*."
+						"description": "Use \"#pragma once\"."
 					},
 					"C_Cpp.classesCreator.headerGuard.useDefine": {
 						"type": "boolean",
 						"default": false,
-						"description": "Use *#ifndef*."
+						"description": "Use \"#ifndef\"."
 					}
 				}
 			}
