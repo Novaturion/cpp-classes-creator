@@ -2,6 +2,8 @@ const VSCode = require('vscode');
 const FileSystem = require("fs");
 const Path = require("path");
 
+const ROOT_FOLDER = Path.normalize(VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase() + Path.sep);
+
 /**
  * @param {VSCode.ExtensionContext} context
  */
@@ -43,7 +45,12 @@ var awaiter = (this && this.__awaiter) || function (
 			});
 	}
 
-	return new (P || (P = Promise))(function (/** @type {(arg0: any) => any} */ resolve, /** @type {(arg0: any) => void} */ reject) {
+	return new (P || (P = Promise))(function (
+		/** @type {(arg0: any) => any} */
+		resolve,
+		/** @type {(arg0: any) => void} */
+		reject
+	) {
 		/**
 		 * @param {any} value
 		 */
@@ -84,43 +91,9 @@ var awaiter = (this && this.__awaiter) || function (
 function main(parameters) {
 	awaiter(this, void 0, void 0, function* () {
 		let classInput = yield showClassInput();
-		classInput = cleanInput(classInput, false);
+		const inputData = handleClassInput(classInput);
 
-		const inputData = parseClassInput(classInput);
-		if (typeof (inputData) == "string") {
-			VSCode.window.showErrorMessage(
-				"Wrong type provided - \"" + inputData + "\". Must be \"class\" or \"struct\"."
-			);
-			return;
-		}
-		else if (inputData && !inputData.class) {
-			VSCode.window.showErrorMessage(
-				"Input doesn't contains definition of the \"class\" or \"struct\"."
-			);
-			return;
-		}
-		else if (!inputData) {
-			return;
-		}
-
-		let resultPaths = {
-			headers: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeadersFolder"),
-			sources: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
-		};
-
-		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.askFolder")) {
-			let pathInput = yield showPathInput();
-			pathInput = cleanInput(pathInput, true);
-
-			if (!pathInput) {
-				return;
-			}
-
-			resultPaths = parsePathInput(pathInput);
-		}
-		else {
-			let projectPaths = getProjectPaths();
-			let contextPath = VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase();
+		let contextPath = ROOT_FOLDER;
 		if (parameters && parameters.fsPath) {
 			let fsPath = parameters.fsPath.toLowerCase();
 
@@ -131,32 +104,38 @@ function main(parameters) {
 			contextPath = fsPath;
 		}
 
-			if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders")) {
-			const folders = splitByFolders(
-				contextPath,
-				resultPaths.sources ? resultPaths.headers : projectPaths.headers,
-				resultPaths.headers ? resultPaths.sources : projectPaths.sources
-			);
+		let resultPaths = { header: null, source: null };
+		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.askFolder")) {
+			let pathInput = yield showPathInput();
+			pathInput = cleanInput(pathInput, true);
 
-			if (folders) {
-				resultPaths.headers = folders.headers;
-				resultPaths.sources = folders.sources;
+			if (!pathInput) {
+				return null;
 			}
-			else {
-				resultPaths.headers = contextPath;
-				resultPaths.sources = contextPath;
-			}
+
+			resultPaths = parsePathInput(pathInput);
 		}
 		else {
-			resultPaths.headers = contextPath;
-			resultPaths.sources = contextPath;
-		}
+			resultPaths = processPaths(contextPath);
 		}
 
 		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createFolder")) {
-			resultPaths.headers = Path.join(resultPaths.headers, inputData.class);
-			resultPaths.sources = Path.join(resultPaths.sources, inputData.class);
+			resultPaths.header = Path.join(resultPaths.header, inputData.class);
+			resultPaths.source = Path.join(resultPaths.source, inputData.class);
 		}
+
+		resultPaths.header = Path.join(
+			resultPaths.header,
+			inputData.class +
+			(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCppHeader")
+				? ".hpp" : ".h")
+		);
+		resultPaths.source = Path.join(
+			resultPaths.source,
+			inputData.class +
+			(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource")
+				? ".cxx" : ".cpp")
+		);
 	});
 }
 
@@ -190,6 +169,77 @@ function showPathInput() {
 
 /**
  * @param {string} input
+ * @returns {{
+ *  namespace: string;
+ *  template: string;
+ *  parent: string;
+ *  class: string;
+ *  type: string;
+ * } | null}
+ */
+function handleClassInput(input) {
+	const inputData = parseClassInput(cleanInput(input, false));
+
+	if (typeof (inputData) == "string") {
+		VSCode.window.showErrorMessage(
+			"Wrong type provided - \"" + inputData + "\". Must be \"class\" or \"struct\"."
+		);
+		return null;
+	}
+	else if (inputData && !inputData.class) {
+		VSCode.window.showErrorMessage(
+			"Input doesn't contains definition of the \"class\" or \"struct\"."
+		);
+		return null;
+	}
+	else if (!inputData) {
+		return null;
+	}
+
+	return inputData;
+}
+
+/**
+ * @param {string} contextPath
+ * @returns {{
+ * header: string | null;
+ * source: string | null;
+ * } | null}
+ */
+function processPaths(contextPath) {
+	let resultPaths = {
+		header: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeadersFolder"),
+		source: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
+	}
+
+	let projectPaths = getProjectPaths();
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders")) {
+		const folders = splitByFolders(
+			contextPath,
+			resultPaths.source ? resultPaths.header : projectPaths.header,
+			resultPaths.header ? resultPaths.source : projectPaths.source
+		);
+
+		if (folders) {
+			resultPaths.header = folders.header;
+			resultPaths.source = folders.source;
+		}
+		else {
+			resultPaths.header = contextPath;
+			resultPaths.source = contextPath;
+		}
+	}
+	else {
+		resultPaths.header = contextPath;
+		resultPaths.source = contextPath;
+	}
+
+	return resultPaths;
+}
+
+/**
+ * @param {string} input
  * @param {boolean} isPath
  * @returns {string}
  */
@@ -200,8 +250,11 @@ function cleanInput(input, isPath) {
 
 	const regex = isPath ? /[^\w\d\s_\-\\/;]+/g : /[^\w\d\s,_:<>]+/g;
 
-	input = input.replace(regex, "");
-	input = input.replace(/[\s\t]+/g, " ").trim();
+	input = input
+		.replace(regex, "")
+		.replace(/[\s\t]+/g, " ")
+		.trim();
+
 	return input;
 }
 
@@ -261,7 +314,7 @@ function parseClassInput(input) {
 		class_ = classRegex[1].trim();
 	}
 
-	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => value == null)) {
+	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => !value)) {
 		class_ = input;
 	}
 
@@ -277,8 +330,8 @@ function parseClassInput(input) {
 /**
  * @param {string} path
  * @returns {{
- * headers: string | null;
- * sources: string | null;
+ * header: string | null;
+ * source: string | null;
  * } | null}
  */
 function parsePathInput(path) {
@@ -287,70 +340,65 @@ function parsePathInput(path) {
 	}
 	path = Path.normalize(path.replace(/[\s]?[\\/][\s]?/g, "/"));
 
-	const rootPath = VSCode.workspace.workspaceFolders[0].uri.fsPath + Path.sep;
 	const paths = path.split(";");
 	return {
-		headers: rootPath + paths[0].trim(),
-		sources: rootPath + paths[1] ? paths[1].trim() : paths[0].trim(),
+		header: ROOT_FOLDER + paths[0].trim(),
+		source: ROOT_FOLDER + paths[1] ? paths[1].trim() : paths[0].trim(),
 	}
 }
 
 /**
  * @returns {{
- * headers: string | null;
- * sources: string | null;
+ * header: string | null;
+ * source: string | null;
  * } | null}
  */
 function getProjectPaths() {
-	const path = VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase();
-	if (!path) { return null; }
-
 	let projectHeadersPath = null;
 	let projectSourcesPath = null;
 
-	if (FileSystem.existsSync(Path.join(path, "include"))) {
-		projectHeadersPath = Path.join(path, "include");
+	if (FileSystem.existsSync(Path.join(ROOT_FOLDER, "include"))) {
+		projectHeadersPath = Path.join(ROOT_FOLDER, "include");
 	}
 
-	if (!projectHeadersPath && FileSystem.existsSync(Path.join(path, "inc"))) {
-		projectHeadersPath = Path.join(path, "inc");
+	if (!projectHeadersPath && FileSystem.existsSync(Path.join(ROOT_FOLDER, "inc"))) {
+		projectHeadersPath = Path.join(ROOT_FOLDER, "inc");
 	}
 
-	if (FileSystem.existsSync(Path.join(path, "source"))) {
-		projectSourcesPath = Path.join(path, "source");
+	if (FileSystem.existsSync(Path.join(ROOT_FOLDER, "source"))) {
+		projectSourcesPath = Path.join(ROOT_FOLDER, "source");
 	}
-	if (!projectSourcesPath && FileSystem.existsSync(Path.join(path, "src"))) {
-		projectSourcesPath = Path.join(path, "src");
+	if (!projectSourcesPath && FileSystem.existsSync(Path.join(ROOT_FOLDER, "src"))) {
+		projectSourcesPath = Path.join(ROOT_FOLDER, "src");
 	}
-	return { headers: projectHeadersPath, sources: projectSourcesPath };
+	return { header: projectHeadersPath, source: projectSourcesPath };
 }
 
 /**
- * @param {string} path
- * @param {string} headers
- * @param {string} sources
+ * @param {string} rootPath
+ * @param {string} headerPath
+ * @param {string} sourcePath
  * @returns {{
- * headers: string | null;
- * sources: string | null;
+ * header: string | null;
+ * source: string | null;
  * } | null}
  */
-function splitByFolders(path, headers, sources) {
-	if (!path) { return null; }
+function splitByFolders(rootPath, headerPath, sourcePath) {
+	if (!rootPath) { return null; }
 
-	const rootPath = VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase() + Path.sep;
-	headers = headers ? headers.replace(rootPath, "") + Path.sep : "";
-	sources = sources ? sources.replace(rootPath, "") + Path.sep : "";
+	headerPath = headerPath ? headerPath : ROOT_FOLDER;
+	sourcePath = sourcePath ? sourcePath : ROOT_FOLDER;
 
-	if (path.includes(headers)) {
-		let difference = path.replace(headers, "").replace(rootPath, "");
-		return { headers: path, sources: Path.join(rootPath, sources, difference) };
+	if (rootPath.includes(headerPath)) {
+		let difference = rootPath.replace(headerPath, "").replace(ROOT_FOLDER, "");
+		return { header: rootPath, source: Path.join(sourcePath, difference) };
 	}
-	else if (path.includes(sources)) {
-		let difference = path.replace(sources, "").replace(rootPath, "");
-		return { headers: Path.join(rootPath, headers, difference), sources: path };
+	else if (rootPath.includes(sourcePath)) {
+		let difference = rootPath.replace(sourcePath, "").replace(ROOT_FOLDER, "");
+		return { header: Path.join(headerPath, difference), source: rootPath };
 	}
 
-	return { headers: path, sources: path };
+	return { header: headerPath, source: sourcePath };
 }
 
 /**
@@ -361,16 +409,16 @@ function splitByFolders(path, headers, sources) {
  * 	class: string | null;
  * 	type: string | null;
  * 	} | null} data
- * @returns {string | null}
+ * @returns {string}
  */
 function getHeader(data) {
 	if (!data || (data && !data.type) || (data && !data.class)) {
-		return null;
+		return "";
 	}
 
 	let lines = [data.type + " " + data.class];
 	if (data.template) {
-		lines.splice(0, 0, "template<class " + data.template.replace(/[\s]?,[\s]?/g, ", class ") + ">");
+		lines.splice(0, 0, "template <class " + data.template.replace(/[\s]?,[\s]?/g, ", class ") + ">");
 	}
 
 	if (data.parent) {
@@ -416,9 +464,21 @@ function getHeader(data) {
 }
 
 /**
- * @param {string} headerPath
+ * @param {string | null} headerPath
+ * @returns {string}
  */
 function getSource(headerPath) {
+	if (!headerPath) {
+		return "";
+	}
+
+	headerPath = headerPath
+		.replace(ROOT_FOLDER, "")
+		.replace(/[\\]/g, "/")
+		.replace(/[\w\d\s\t_\-]+\//, "")
+
+	return "#include \"" + headerPath + "\"\n";
+}
 
 /**
  * @param {string[] | null} paths
@@ -460,7 +520,7 @@ function writeFiles(...files) {
 	for (const data of files) {
 		if (!data || data && !data.path) {
 			continue;
-}
+		}
 
 		FileSystem.writeFile(
 			data.path,
