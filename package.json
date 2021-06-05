@@ -3,7 +3,15 @@
 	"displayName": "C++ Classes Creator",
 	"description": "A better way to create C++ classes",
 	"publisher": "Novaturion",
-	"version": "0.0.1",
+	"version": "0.1.0",
+	"icon": "resources/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Novaturion/cpp-classes-creator"
+	},
+	"bugs": {
+		"url": "https://github.com/Novaturion/cpp-classes-creator/issues"
+	},
 	"engines": {
 		"vscode": "^1.56.0"
 	},
@@ -64,47 +72,62 @@
 					"C_Cpp.classesCreator.folder.defaultHeadersFolder": {
 						"type": "string",
 						"default": null,
-						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if `splitByFolders` is false."
+						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if splitByFolders is false."
 					},
 					"C_Cpp.classesCreator.folder.defaultSourcesFolder": {
 						"type": "string",
 						"default": null,
-						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if `splitByFolders` is false."
+						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if splitByFolders is false."
+					},
+					"C_Cpp.classesCreator.folder.detectHeadersFolder": {
+						"type": "string[]",
+						"default": ["inc", "include"],
+						"description": "List of folders names that should be found and used for headers files creation."
+					},
+					"C_Cpp.classesCreator.folder.detectSourcesFolder": {
+						"type": "string[]",
+						"default": ["src", "source"],
+						"description": "List of folders names that should be found and used for sources files creation."
 					},
 					"C_Cpp.classesCreator.folder.askFolder": {
 						"type": "boolean",
 						"default": false,
-						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If `splitByFolders` is true create two folders for source and header files. Ignored if called from context menu."
+						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If splitByFolders is true create two folders for source and header files. Ignored if called from context menu."
 					},
 					"C_Cpp.classesCreator.folder.createFolder": {
 						"type": "boolean",
 						"default": false,
-						"description": "Create a folder for the class. If `splitByFolders` is true create two folders for source and header files."
+						"description": "Create a folder for the class. If splitByFolders is true create two folders for source and header files."
 					},
 					"C_Cpp.classesCreator.folder.splitByFolders": {
 						"type": "boolean",
 						"default": true,
-						"description": "Place header under `defaultHeadersFolder` folder and source file under `defaultSourceFolder`. If called from context menu header will be placed under cursor if default folders aren't specified."
+						"description": "Place header under defaultHeadersFolder folder and source file under defaultSourceFolder. If called from context menu header will be placed under cursor if default folders aren't specified."
+					},
+					"C_Cpp.classesCreator.folder.detectFolders": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable detection of include and source folders based on detectFoldersHeaders and detectFoldersSources lists."
 					},
 					"C_Cpp.classesCreator.file.useCppHeader": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use \".hpp\" instead of \".h\"."
+						"description": "Use .hpp instead of .h."
 					},
 					"C_Cpp.classesCreator.file.useCxxSource": {
 						"type": "boolean",
 						"default": false,
-						"description": "Use \".cxx\" instead of \".cpp\"."
+						"description": "Use .cxx instead of .cpp."
 					},
-					"C_Cpp.classesCreator.headerGuard.usePragma": {
+					"C_Cpp.classesCreator.header.usePragma": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use \"#pragma once\"."
+						"description": "Use #pragma once."
 					},
-					"C_Cpp.classesCreator.headerGuard.useDefine": {
+					"C_Cpp.classesCreator.header.useDefine": {
 						"type": "boolean",
 						"default": false,
-						"description": "Use \"#ifndef\"."
+						"description": "Use #ifndef."
 					}
 				}
 			}
