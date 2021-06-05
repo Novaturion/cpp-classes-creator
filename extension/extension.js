@@ -124,18 +124,8 @@ function main(parameters) {
 		resultPaths = addFolders(resultPaths, inputData.namespace, inputData.class);
 		resultPaths = addFiles(resultPaths, inputData.class);
 
-		resultPaths.header = Path.join(
-			resultPaths.header,
-			inputData.class +
-			(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCppHeader")
-				? ".hpp" : ".h")
-		);
-		resultPaths.source = Path.join(
-			resultPaths.source,
-			inputData.class +
-			(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource")
-				? ".cxx" : ".cpp")
-		);
+		resultPaths.header = applyCase(resultPaths.header);
+		resultPaths.source = applyCase(resultPaths.source);
 
 		if (makeFolders(Path.dirname(resultPaths.header), Path.dirname(resultPaths.source))) {
 			writeFiles(
@@ -511,6 +501,56 @@ function addFiles(paths, fileName) {
 	);
 
 	return paths;
+}
+
+/**
+ * @param {string | null} path
+ * @returns {string | null}
+ */
+function applyCase(path) {
+	if (!path) {
+		return null;
+	}
+
+	const filesCase = VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.nameCase").toLowerCase();
+	const foldersCase = VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.nameCase").toLowerCase();
+
+	let file = Path.basename(path);
+	let folders = Path.dirname(path);
+
+	switch (filesCase) {
+		case "lower":
+			file = file.toLowerCase();
+			break;
+		case "upper":
+			file = file.toUpperCase();
+			break;
+		case "capitalize":
+			file = file.charAt(0).toUpperCase() + file.slice(1);
+			break;
+
+		default:
+			break;
+	}
+
+	switch (foldersCase) {
+		case "lower":
+			folders = folders.toLowerCase();
+			break;
+		case "upper":
+			folders = folders.toUpperCase();
+			break;
+		case "capitalize":
+			for (const folder of folders.split(Path.sep)) {
+				folders = folders.replace(folder, folder.charAt(0).toUpperCase() + folder.slice(1))
+			}
+			break;
+
+		default:
+			break;
+	}
+
+	return Path.join(folders, file);
 }
 
 /**
