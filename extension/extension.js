@@ -118,13 +118,11 @@ function main(parameters) {
 			resultPaths = parsePathInput(pathInput);
 		}
 		else {
-			resultPaths = processPaths(contextPath);
+			resultPaths = getPaths(contextPath);
 		}
 
-		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createFolder")) {
-			resultPaths.header = Path.join(resultPaths.header, inputData.class);
-			resultPaths.source = Path.join(resultPaths.source, inputData.class);
-		}
+		resultPaths = addFolders(resultPaths, inputData.namespace, inputData.class);
+		resultPaths = addFiles(resultPaths, inputData.class);
 
 		resultPaths.header = Path.join(
 			resultPaths.header,
@@ -446,6 +444,73 @@ function splitByFolders(rootPath, headerPath, sourcePath) {
 	}
 
 	return { header: headerPath, source: sourcePath };
+}
+
+/**
+ * @param {{
+ * header: string | null;
+ * source: string | null;
+ * }} paths
+ * @param {string | null} namespace
+ * @param {string | null} class_
+ * @returns {{
+ * header: string | null;
+ * source: string | null;
+ * } | null}
+ */
+function addFolders(paths, namespace, class_) {
+	if (!class_ || !paths || paths && (!paths.header || !paths.source)) {
+		return null;
+	}
+
+	if (namespace && VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createNamespaceFolder")) {
+		paths.header = paths.header.includes(namespace.toLowerCase())
+			? paths.header
+			: Path.join(paths.header, namespace);
+
+		paths.source = paths.source.includes(namespace.toLowerCase())
+			? paths.source
+			: Path.join(paths.source, namespace);
+	}
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createClassFolder")) {
+		paths.header = Path.join(paths.header, class_);
+		paths.source = Path.join(paths.source, class_);
+	}
+
+	return paths;
+}
+
+/**
+ * @param {{
+ * header: string | null;
+ * source: string | null;
+ * }} paths
+ * @param {string} fileName
+ * @returns {{
+ * header: string | null;
+ * source: string | null;
+ * } | null}
+ */
+function addFiles(paths, fileName) {
+	if (!paths || paths && (!paths.header || !paths.source)) {
+		return null;
+	}
+
+	paths.header = Path.join(
+		paths.header,
+		fileName +
+		(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCppHeader")
+			? ".hpp" : ".h")
+	);
+	paths.source = Path.join(
+		paths.source,
+		fileName +
+		(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource")
+			? ".cxx" : ".cpp")
+	);
+
+	return paths;
 }
 
 /**

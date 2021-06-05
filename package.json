@@ -95,15 +95,15 @@
 						],
 						"description": "List of source folders names that can exists in root folder."
 					},
-					"C_Cpp.classesCreator.folder.askFolder": {
-						"type": "boolean",
-						"default": false,
-						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If splitByFolders is true create two folders for source and header files. Ignored if called from context menu."
-					},
-					"C_Cpp.classesCreator.folder.createFolder": {
+					"C_Cpp.classesCreator.folder.createClassFolder": {
 						"type": "boolean",
 						"default": false,
 						"description": "Create a folder for the class. If splitByFolders is true create two folders for source and header files."
+					},
+					"C_Cpp.classesCreator.folder.createNamespaceFolder": {
+						"type": "boolean",
+						"default": true,
+						"description": "Create a folder for the namespace if doesn't exists in provided path. If splitByFolders is true create two folders for source and header files."
 					},
 					"C_Cpp.classesCreator.folder.splitByFolders": {
 						"type": "boolean",
