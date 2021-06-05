@@ -3,8 +3,8 @@
 	"displayName": "C++ Classes Creator",
 	"description": "A better way to create C++ classes",
 	"publisher": "Novaturion",
-	"version": "0.1.0",
-	"icon": "resources/icon.png",
+	"version": "0.1.1",
+	"icon": "assets/icon.png",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Novaturion/cpp-classes-creator"
@@ -170,5 +170,6 @@
 		"@types/node": "^12.11.7",
 		"glob": "^7.1.6",
 		"typescript": "^4.1.3"
-	}
+	},
+	"dependencies": {}
 }
