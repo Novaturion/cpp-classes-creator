@@ -29,18 +29,20 @@ This simple extension allows you to create classes or structures in a better way
 - Create files in different folders, like *`include`* and *`source`*.
 - Create folder that matches namespace.
 - Create folder that matches class.
+- Hotkeys
+	- `Shift` + `Alt` + `C` to create new class while text editor is focused
 
 **Creation with default settings**
 
-\!\[Creation\]\(assets/readme/creation_default.gif\)
+![Creation](https://github.com/Novaturion/cpp-classes-creator/blob/main/assets/readme/creation_default.gif?raw=true)
 
 **Creation under existing namespace folder**
 
-\!\[Creation\]\(assets/readme/creation_namespace.gif\)
+![Creation](https://github.com/Novaturion/cpp-classes-creator/blob/main/assets/readme/creation_namespace.gif?raw=true)
 
 **Creation with hotkey**
 
-\!\[Creation\]\(assets/readme/creation_ask.gif\)
+![Creation with hotkey](https://github.com/Novaturion/cpp-classes-creator/blob/main/assets/readme/creation_ask.gif?raw=true)
 
 ## Extension Settings
 
