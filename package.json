@@ -81,13 +81,19 @@
 					},
 					"C_Cpp.classesCreator.folder.detectHeadersFolder": {
 						"type": "string[]",
-						"default": ["inc", "include"],
-						"description": "List of folders names that should be found and used for headers files creation."
+						"default": [
+							"inc",
+							"include"
+						],
+						"description": "List of headers folders names that can exists in root folder."
 					},
 					"C_Cpp.classesCreator.folder.detectSourcesFolder": {
 						"type": "string[]",
-						"default": ["src", "source"],
-						"description": "List of folders names that should be found and used for sources files creation."
+						"default": [
+							"src",
+							"source"
+						],
+						"description": "List of source folders names that can exists in root folder."
 					},
 					"C_Cpp.classesCreator.folder.askFolder": {
 						"type": "boolean",

@@ -95,7 +95,7 @@ function main(parameters) {
 
 		if (!inputData) { return; }
 
-		let contextPath = ROOT_FOLDER;
+		let contextPath = null;
 		if (parameters && parameters.fsPath) {
 			let fsPath = parameters.fsPath.toLowerCase();
 
@@ -107,7 +107,7 @@ function main(parameters) {
 		}
 
 		let resultPaths = { header: null, source: null };
-		if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.askFolder")) {
+		if (!contextPath) {
 			let pathInput = yield showPathInput();
 			pathInput = cleanInput(pathInput, true);
 
@@ -201,11 +201,11 @@ function showRewriteFileInput(path) {
 /**
  * @param {string} input
  * @returns {{
- * namespace: string;
- * template: string;
- * parent: string;
- * class: string;
- * type: string;
+ * namespace: string | null;
+ * template: string | null;
+ * parent: string | null;
+ * class: string | null;
+ * type: string | null;
  * } | null}
  */
 function handleClassInput(input) {
@@ -237,7 +237,7 @@ function handleClassInput(input) {
  * source: string | null;
  * } | null}
  */
-function processPaths(contextPath) {
+function getPaths(contextPath) {
 	let resultPaths = {
 		header: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeadersFolder"),
 		source: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
@@ -367,23 +367,31 @@ function parseClassInput(input) {
 }
 
 /**
- * @param {string} path
+ * @param {string} data
  * @returns {{
  * header: string | null;
  * source: string | null;
  * } | null}
  */
-function parsePathInput(path) {
-	if (!path) {
+function parsePathInput(data) {
+	if (!data) {
 		return null;
 	}
-	path = Path.normalize(path.replace(/[\s]?[\\/][\s]?/g, "/"));
+	data = Path.normalize(data.replace(/[\s]?[\\/][\s]?/g, "/"));
 
-	const paths = path.split(";");
-	return {
-		header: ROOT_FOLDER + paths[0].trim(),
-		source: ROOT_FOLDER + paths[1] ? paths[1].trim() : paths[0].trim(),
+	const inputPaths = data.split(";");
+	let paths = {
+		header: inputPaths[0].trim(),
+		source: (inputPaths[1] ? inputPaths[1].trim() : inputPaths[0].trim()),
 	}
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectFolders")) {
+		let projectPaths = getProjectPaths();
+		paths.header = Path.join(projectPaths.header, paths.header);
+		paths.source = Path.join(projectPaths.source, paths.source);
+	}
+
+	return paths;
 }
 
 /**
@@ -451,7 +459,7 @@ function splitByFolders(rootPath, headerPath, sourcePath) {
  * @returns {string}
  */
 function getHeader(data) {
-	if (!data || (data && !data.type) || (data && !data.class)) {
+	if (!data || data && (!data.type || !data.class)) {
 		return "";
 	}
 
@@ -461,7 +469,7 @@ function getHeader(data) {
 	}
 
 	if (data.parent) {
-		lines[lines.length > 1 ? 1 : 0] += " : " + data.parent.replace(/[\s]?,[\s]?/g, ", ");
+		lines[lines.length > 1 ? 1 : 0] += " : public " + data.parent.replace(/[\s]?,[\s]?/g, ", public ");
 	}
 
 	lines = lines.concat([
