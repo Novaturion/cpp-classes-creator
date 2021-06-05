@@ -3,7 +3,16 @@
 	"displayName": "C++ Classes Creator",
 	"description": "A better way to create C++ classes",
 	"publisher": "Novaturion",
-	"version": "0.0.1",
+	"version": "0.1.1",
+	"icon": "assets/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Novaturion/cpp-classes-creator"
+	},
+	"bugs": {
+		"url": "https://github.com/Novaturion/cpp-classes-creator/issues"
+	},
+	"license": "https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE",
 	"engines": {
 		"vscode": "^1.56.0"
 	},
@@ -61,50 +70,89 @@
 			{
 				"title": "C++ Classes Creator",
 				"properties": {
-					"C_Cpp.classesCreator.defaultHeadersFolder": {
+					"C_Cpp.classesCreator.folder.nameCase": {
+						"enum": [
+							"lower",
+							"UPPER",
+							"Capitalize"
+						],
+						"default": "lower",
+						"description": "Which case will be applyed to folders names."
+					},
+					"C_Cpp.classesCreator.folder.defaultHeadersFolder": {
 						"type": "string",
 						"default": null,
-						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if `splitByFolders` is false."
+						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if splitByFolders is false."
 					},
-					"C_Cpp.classesCreator.defaultSourcesFolder": {
+					"C_Cpp.classesCreator.folder.defaultSourcesFolder": {
 						"type": "string",
 						"default": null,
-						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if `splitByFolders` is false."
+						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if splitByFolders is false."
 					},
-					"C_Cpp.classesCreator.askFolder": {
+					"C_Cpp.classesCreator.folder.detectHeadersFolder": {
+						"type": "string[]",
+						"default": [
+							"inc",
+							"include"
+						],
+						"description": "List of headers folders names that can exists in root folder."
+					},
+					"C_Cpp.classesCreator.folder.detectSourcesFolder": {
+						"type": "string[]",
+						"default": [
+							"src",
+							"source"
+						],
+						"description": "List of source folders names that can exists in root folder."
+					},
+					"C_Cpp.classesCreator.folder.createClassFolder": {
 						"type": "boolean",
 						"default": false,
-						"description": "Ask where create the header and source files. Folder will be created if doesn't exists. If `splitByFolders` is true create two folders for source and header files. Ignored if called from context menu."
+						"description": "Create a folder for the class. If splitByFolders is true create two folders for source and header files."
 					},
-					"C_Cpp.classesCreator.createFolder": {
+					"C_Cpp.classesCreator.folder.createNamespaceFolder": {
 						"type": "boolean",
 						"default": true,
-						"description": "Create a folder for the class. If `splitByFolders` is true create two folders for source and header files."
+						"description": "Create a folder for the namespace if doesn't exists in provided path. If splitByFolders is true create two folders for source and header files."
 					},
-					"C_Cpp.classesCreator.splitByFolders": {
+					"C_Cpp.classesCreator.folder.splitByFolders": {
 						"type": "boolean",
 						"default": true,
-						"description": "Place header under `defaultHeadersFolder` folder and source file under `defaultSourceFolder`. If called from context menu header will be placed under cursor if default folders aren't specified."
+						"description": "Place header under defaultHeadersFolder folder and source file under defaultSourceFolder. If called from context menu header will be placed under cursor if default folders aren't specified."
 					},
-					"C_Cpp.classesCreator.useCppHeader": {
+					"C_Cpp.classesCreator.folder.detectFolders": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use *.hpp* instead of *.h*."
+						"description": "Enable detection of include and source folders based on detectFoldersHeaders and detectFoldersSources lists."
 					},
-					"C_Cpp.classesCreator.useCxxSource": {
+					"C_Cpp.classesCreator.file.nameCase": {
+						"enum": [
+							"lower",
+							"UPPER",
+							"Capitalize"
+						],
+						"default": "lower",
+						"description": "Which case will be applyed to files names."
+					},
+					"C_Cpp.classesCreator.file.useCppHeader": {
 						"type": "boolean",
 						"default": true,
-						"description": "Use *.cxx* instead of *.cpp*."
+						"description": "Use .hpp instead of .h."
 					},
-					"C_Cpp.classesCreator.headerGuard.usePragma": {
-						"type": "boolean",
-						"default": true,
-						"description": "Use *#pragma once*."
-					},
-					"C_Cpp.classesCreator.headerGuard.useDefine": {
+					"C_Cpp.classesCreator.file.useCxxSource": {
 						"type": "boolean",
 						"default": false,
-						"description": "Use *#ifndef*."
+						"description": "Use .cxx instead of .cpp."
+					},
+					"C_Cpp.classesCreator.header.usePragma": {
+						"type": "boolean",
+						"default": true,
+						"description": "Use #pragma once."
+					},
+					"C_Cpp.classesCreator.header.useDefine": {
+						"type": "boolean",
+						"default": false,
+						"description": "Use #ifndef."
 					}
 				}
 			}
@@ -122,5 +170,6 @@
 		"@types/node": "^12.11.7",
 		"glob": "^7.1.6",
 		"typescript": "^4.1.3"
-	}
+	},
+	"dependencies": {}
 }
