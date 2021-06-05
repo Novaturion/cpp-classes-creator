@@ -93,6 +93,8 @@ function main(parameters) {
 		let classInput = yield showClassInput();
 		const inputData = handleClassInput(classInput);
 
+		if (!inputData) { return; }
+
 		let contextPath = ROOT_FOLDER;
 		if (parameters && parameters.fsPath) {
 			let fsPath = parameters.fsPath.toLowerCase();
@@ -110,7 +112,7 @@ function main(parameters) {
 			pathInput = cleanInput(pathInput, true);
 
 			if (!pathInput) {
-				return null;
+				return;
 			}
 
 			resultPaths = parsePathInput(pathInput);
@@ -139,8 +141,12 @@ function main(parameters) {
 
 		if (makeFolders(Path.dirname(resultPaths.header), Path.dirname(resultPaths.source))) {
 			writeFiles(
-				{ path: resultPaths.header, content: getHeader(inputData) },
-				{ path: resultPaths.source, content: getSource(resultPaths.header) }
+				{
+					headerPath: resultPaths.header,
+					sourcePath: resultPaths.source,
+					headerContent: getHeader(inputData),
+					sourceContent: getSource(resultPaths.header)
+				}
 			);
 		}
 	});
@@ -151,12 +157,13 @@ function main(parameters) {
 */
 function showClassInput() {
 	return awaiter(this, void 0, void 0, function* () {
-		var option = {
+		return VSCode.window.showInputBox(
+			{
 			ignoreFocusOut: false,
 			placeHolder: "class Namespace::Class<T, U> : Parent, Interface",
 			prompt: "Provide what you want to create. Must contains \"class\" or \"struct\" keyword at the begining. Can be with namespace, template and parent class."
-		};
-		return VSCode.window.showInputBox(option);
+			}
+		);
 	});
 }
 
@@ -165,23 +172,40 @@ function showClassInput() {
 */
 function showPathInput() {
 	return awaiter(this, void 0, void 0, function* () {
-		var option = {
+		return yield VSCode.window.showInputBox(
+			{
 			ignoreFocusOut: false,
 			placeHolder: "path/to/header; path/to/source",
 			prompt: "Provide in which folders files will be created. Must be relative to the root folder."
-		};
-		return yield VSCode.window.showInputBox(option);
+			}
+		);
+	});
+}
+
+/**
+ * @param {string} path
+ * @returns {string | null}
+ */
+function showRewriteFileInput(path) {
+	return awaiter(this, void 0, void 0, function* () {
+		return yield VSCode.window.showQuickPick(
+			["Yes", "No"],
+			{
+				placeHolder: path + " already exists, rewrite?",
+				canPickMany: false
+			}
+		);
 	});
 }
 
 /**
  * @param {string} input
  * @returns {{
- *  namespace: string;
- *  template: string;
- *  parent: string;
- *  class: string;
- *  type: string;
+ * namespace: string;
+ * template: string;
+ * parent: string;
+ * class: string;
+ * type: string;
  * } | null}
  */
 function handleClassInput(input) {
@@ -219,7 +243,14 @@ function processPaths(contextPath) {
 		source: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
 	}
 
-	let projectPaths = getProjectPaths();
+	let projectPaths = {
+		header: null,
+		source: null
+	};
+
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectFolders")) {
+		projectPaths = getProjectPaths();
+	}
 
 	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders")) {
 		const folders = splitByFolders(
@@ -278,7 +309,8 @@ function cleanInput(input, isPath) {
 function parseClassInput(input) {
 	if (!input) { return null; }
 
-	let type = (input + " ").slice(0, input.indexOf(" "));
+	let type = input.match(/^[a-z]+/)[0];
+
 	if (!(type == "class" || type == "struct")) {
 		return type;
 	}
@@ -364,20 +396,20 @@ function getProjectPaths() {
 	let projectHeadersPath = null;
 	let projectSourcesPath = null;
 
-	if (FileSystem.existsSync(Path.join(ROOT_FOLDER, "include"))) {
-		projectHeadersPath = Path.join(ROOT_FOLDER, "include");
+	for (const folder of VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectHeadersFolder")) {
+		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
+			projectHeadersPath = Path.join(ROOT_FOLDER, folder);
+			break;
+	}
 	}
 
-	if (!projectHeadersPath && FileSystem.existsSync(Path.join(ROOT_FOLDER, "inc"))) {
-		projectHeadersPath = Path.join(ROOT_FOLDER, "inc");
+	for (const folder of VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectSourcesFolder")) {
+		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
+			projectSourcesPath = Path.join(ROOT_FOLDER, folder);
+			break;
+	}
 	}
 
-	if (FileSystem.existsSync(Path.join(ROOT_FOLDER, "source"))) {
-		projectSourcesPath = Path.join(ROOT_FOLDER, "source");
-	}
-	if (!projectSourcesPath && FileSystem.existsSync(Path.join(ROOT_FOLDER, "src"))) {
-		projectSourcesPath = Path.join(ROOT_FOLDER, "src");
-	}
 	return { header: projectHeadersPath, source: projectSourcesPath };
 }
 
@@ -410,12 +442,12 @@ function splitByFolders(rootPath, headerPath, sourcePath) {
 
 /**
  * @param {{
- * 	namespace: string | null;
- * 	template: string | null;
- * 	parent: string | null;
- * 	class: string | null;
- * 	type: string | null;
- * 	} | null} data
+ * namespace: string | null;
+ * template: string | null;
+ * parent: string | null;
+ * class: string | null;
+ * type: string | null;
+ * } | null} data
  * @returns {string}
  */
 function getHeader(data) {
@@ -448,14 +480,14 @@ function getHeader(data) {
 		lines.push("}")
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.headerGuard.useDefine")) {
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.useDefine")) {
 		let classUpper = data.class.toUpperCase();
 		lines.splice(0, 0, "#ifndef " + classUpper + "_H");
 		lines.splice(1, 0, "#define " + classUpper + "_H\n\n");
 		lines.push("#endif");
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.headerGuard.usePragma")) {
+	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.usePragma")) {
 		if (lines.indexOf("#endif") > -1) {
 			lines.splice(2, 0, "#pragma once\n\n")
 			lines[1] = lines[1].replace("\n\n", "")
@@ -512,12 +544,15 @@ function makeFolders(...paths) {
 
 /**
  * @param {{
- * path: string | null;
- * content: string | null;
+ * headerPath: string | null;
+ * sourcePath: string | null;
+ * headerContent: string | null;
+ * sourceContent: string | null;
  * }[] | null[] | null} files
  * @returns {boolean}
  */
 function writeFiles(...files) {
+	return awaiter(this, void 0, void 0, function* () {
 	if (!files || files &&
 		(files.length < 1 || files.every((data) => !data))
 	) {
@@ -525,13 +560,33 @@ function writeFiles(...files) {
 	}
 
 	for (const data of files) {
-		if (!data || data && !data.path) {
+			if (!data || data && !data.headerPath) {
 			continue;
 		}
 
+			let result;
+			if (FileSystem.existsSync(data.headerPath)) {
+				result = yield showRewriteFileInput(data.headerPath);
+			}
+			else if (FileSystem.existsSync(data.sourcePath)) {
+				result = yield showRewriteFileInput(data.headerPath);
+			}
+
+			if (!result || result && result.toLowerCase() == "yes") {
+				FileSystem.writeFile(
+					data.headerPath,
+					data.headerContent ? data.headerContent : "",
+					function (error) {
+						if (error) {
+							VSCode.window.showErrorMessage(error.message);
+							return false;
+						}
+					}
+				);
+
 		FileSystem.writeFile(
-			data.path,
-			data.content ? data.content : "",
+					data.sourcePath,
+					data.sourceContent ? data.sourceContent : "",
 			function (error) {
 				if (error) {
 					VSCode.window.showErrorMessage(error.message);
@@ -540,5 +595,7 @@ function writeFiles(...files) {
 			}
 		);
 	}
+		}
 	return true;
+	});
 }
