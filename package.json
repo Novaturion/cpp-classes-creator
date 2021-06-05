@@ -12,6 +12,7 @@
 	"bugs": {
 		"url": "https://github.com/Novaturion/cpp-classes-creator/issues"
 	},
+	"license": "https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE",
 	"engines": {
 		"vscode": "^1.56.0"
 	},
@@ -69,6 +70,15 @@
 			{
 				"title": "C++ Classes Creator",
 				"properties": {
+					"C_Cpp.classesCreator.folder.nameCase": {
+						"enum": [
+							"lower",
+							"UPPER",
+							"Capitalize"
+						],
+						"default": "lower",
+						"description": "Which case will be applyed to folders names."
+					},
 					"C_Cpp.classesCreator.folder.defaultHeadersFolder": {
 						"type": "string",
 						"default": null,
@@ -114,6 +124,15 @@
 						"type": "boolean",
 						"default": true,
 						"description": "Enable detection of include and source folders based on detectFoldersHeaders and detectFoldersSources lists."
+					},
+					"C_Cpp.classesCreator.file.nameCase": {
+						"enum": [
+							"lower",
+							"UPPER",
+							"Capitalize"
+						],
+						"default": "lower",
+						"description": "Which case will be applyed to files names."
 					},
 					"C_Cpp.classesCreator.file.useCppHeader": {
 						"type": "boolean",
