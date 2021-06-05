@@ -3,6 +3,8 @@
 This simple extension allows you to create classes or structures in a better way.
 
 ## Features
+- Hotkeys
+	- `Shift` + `Alt` + `C` to create new class while text editor is focused
 - Parse namespace, class/structure name, template and parent class/structure.<br>
 	So this input
 	```C++
@@ -11,7 +13,6 @@ This simple extension allows you to create classes or structures in a better way
 	will be expanded to
 	```C++
 	#pragma once
-
 
 	namespace Containers
 	{
@@ -27,10 +28,10 @@ This simple extension allows you to create classes or structures in a better way
 	```
 - Automatic detection of *`include`* and *`source`* folders by its names.
 - Create files in different folders, like *`include`* and *`source`*.
+- Create files in existing namespace folders.
 - Create folder that matches namespace.
 - Create folder that matches class.
-- Hotkeys
-	- `Shift` + `Alt` + `C` to create new class while text editor is focused
+- Writing `#pragma once` or/and `#ifndef` guarders
 
 **Creation with default settings**
 
@@ -72,11 +73,26 @@ Add an [issue](https://github.com/Novaturion/cpp-classes-creator/issues)
 
 ## Release Notes
 
+- ### 0.1.1
+	- Creation by hotkey
+	- Parsing of input like
+		```C++
+		class Containers::MyContainer<T, U> : Container, IDisposable
+		```
+	- Automatically detection of `include` and `source` folders.
+	- Creation of files in different folders.
+	- Creation of folder that matches provided namespace.
+	- Creation of folder that matches provided class.
+	- Checking an existing namespace folder.
+	- `#pragma once` and `#ifndef` guarders.
+	- `.hpp` and `h`, `.cxx` and `.cpp` extensions.
+	- Applying lower, upper cases or capitalization to files and folders names.
+
 - ### 0.1.0
-	- Initial release
+	- Initial release.
 
 ## Licence 
 
-[GPL 3](https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE)
+[GPL 3](https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE).
 
 **Enjoy!**
