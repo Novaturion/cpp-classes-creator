@@ -141,8 +141,12 @@ function main(parameters) {
 
 		if (makeFolders(Path.dirname(resultPaths.header), Path.dirname(resultPaths.source))) {
 			writeFiles(
-				{ path: resultPaths.header, content: getHeader(inputData) },
-				{ path: resultPaths.source, content: getSource(resultPaths.header) }
+				{
+					headerPath: resultPaths.header,
+					sourcePath: resultPaths.source,
+					headerContent: getHeader(inputData),
+					sourceContent: getSource(resultPaths.header)
+				}
 			);
 		}
 	});
@@ -178,6 +182,19 @@ function showPathInput() {
 	});
 }
 
+/**
+ * @param {string} path
+ * @returns {string | null}
+ */
+function showRewriteFileInput(path) {
+	return awaiter(this, void 0, void 0, function* () {
+		return yield VSCode.window.showQuickPick(
+			["Yes", "No"],
+			{
+				placeHolder: path + " already exists, rewrite?",
+				canPickMany: false
+			}
+		);
 	});
 }
 
@@ -527,12 +544,15 @@ function makeFolders(...paths) {
 
 /**
  * @param {{
- * path: string | null;
- * content: string | null;
+ * headerPath: string | null;
+ * sourcePath: string | null;
+ * headerContent: string | null;
+ * sourceContent: string | null;
  * }[] | null[] | null} files
  * @returns {boolean}
  */
 function writeFiles(...files) {
+	return awaiter(this, void 0, void 0, function* () {
 	if (!files || files &&
 		(files.length < 1 || files.every((data) => !data))
 	) {
@@ -540,13 +560,33 @@ function writeFiles(...files) {
 	}
 
 	for (const data of files) {
-		if (!data || data && !data.path) {
+			if (!data || data && !data.headerPath) {
 			continue;
 		}
 
+			let result;
+			if (FileSystem.existsSync(data.headerPath)) {
+				result = yield showRewriteFileInput(data.headerPath);
+			}
+			else if (FileSystem.existsSync(data.sourcePath)) {
+				result = yield showRewriteFileInput(data.headerPath);
+			}
+
+			if (!result || result && result.toLowerCase() == "yes") {
+				FileSystem.writeFile(
+					data.headerPath,
+					data.headerContent ? data.headerContent : "",
+					function (error) {
+						if (error) {
+							VSCode.window.showErrorMessage(error.message);
+							return false;
+						}
+					}
+				);
+
 		FileSystem.writeFile(
-			data.path,
-			data.content ? data.content : "",
+					data.sourcePath,
+					data.sourceContent ? data.sourceContent : "",
 			function (error) {
 				if (error) {
 					VSCode.window.showErrorMessage(error.message);
@@ -555,5 +595,7 @@ function writeFiles(...files) {
 			}
 		);
 	}
+		}
 	return true;
+	});
 }
