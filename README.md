@@ -75,4 +75,8 @@ Add an [issue](https://github.com/Novaturion/cpp-classes-creator/issues)
 - ### 0.1.0
 	- Initial release
 
+## Licence 
+
+[GPL 3](https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE)
+
 **Enjoy!**

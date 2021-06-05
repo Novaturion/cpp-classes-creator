@@ -1,3 +1,21 @@
+/*
+ * C++ Classes Creator
+ * Copyright (c) 2021 Podtelezhnikov Ilya (Novaturion).
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses.
+ */
+
 const VSCode = require('vscode');
 const FileSystem = require("fs");
 const Path = require("path");
@@ -147,9 +165,9 @@ function showClassInput() {
 	return awaiter(this, void 0, void 0, function* () {
 		return VSCode.window.showInputBox(
 			{
-			ignoreFocusOut: false,
-			placeHolder: "class Namespace::Class<T, U> : Parent, Interface",
-			prompt: "Provide what you want to create. Must contains \"class\" or \"struct\" keyword at the begining. Can be with namespace, template and parent class."
+				ignoreFocusOut: false,
+				placeHolder: "class Namespace::Class<T, U> : Parent, Interface",
+				prompt: "Provide what you want to create. Must contains \"class\" or \"struct\" keyword at the begining. Can be with namespace, template and parent class."
 			}
 		);
 	});
@@ -162,9 +180,9 @@ function showPathInput() {
 	return awaiter(this, void 0, void 0, function* () {
 		return yield VSCode.window.showInputBox(
 			{
-			ignoreFocusOut: false,
-			placeHolder: "path/to/header; path/to/source",
-			prompt: "Provide in which folders files will be created. Must be relative to the root folder."
+				ignoreFocusOut: false,
+				placeHolder: "path/to/header; path/to/source",
+				prompt: "Provide in which folders files will be created. Must be relative to the root folder."
 			}
 		);
 	});
@@ -396,14 +414,14 @@ function getProjectPaths() {
 		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
 			projectHeadersPath = Path.join(ROOT_FOLDER, folder);
 			break;
-	}
+		}
 	}
 
 	for (const folder of VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectSourcesFolder")) {
 		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
 			projectSourcesPath = Path.join(ROOT_FOLDER, folder);
 			break;
-	}
+		}
 	}
 
 	return { header: projectHeadersPath, source: projectSourcesPath };
@@ -666,16 +684,16 @@ function makeFolders(...paths) {
  */
 function writeFiles(...files) {
 	return awaiter(this, void 0, void 0, function* () {
-	if (!files || files &&
-		(files.length < 1 || files.every((data) => !data))
-	) {
-		return false;
-	}
-
-	for (const data of files) {
-			if (!data || data && !data.headerPath) {
-			continue;
+		if (!files || files &&
+			(files.length < 1 || files.every((data) => !data))
+		) {
+			return false;
 		}
+
+		for (const data of files) {
+			if (!data || data && !data.headerPath) {
+				continue;
+			}
 
 			let result;
 			if (FileSystem.existsSync(data.headerPath)) {
@@ -697,18 +715,18 @@ function writeFiles(...files) {
 					}
 				);
 
-		FileSystem.writeFile(
+				FileSystem.writeFile(
 					data.sourcePath,
 					data.sourceContent ? data.sourceContent : "",
-			function (error) {
-				if (error) {
-					VSCode.window.showErrorMessage(error.message);
-					return false;
-				}
+					function (error) {
+						if (error) {
+							VSCode.window.showErrorMessage(error.message);
+							return false;
+						}
+					}
+				);
 			}
-		);
-	}
 		}
-	return true;
+		return true;
 	});
 }
