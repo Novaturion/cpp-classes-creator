@@ -1,34 +1,58 @@
 /*
- * C++ Classes Creator
- * Copyright (c) 2021 Podtelezhnikov Ilya (Novaturion).
+ * MIT License
  * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Copyright (c) 2023 Ilya "Novaturion" Podtelezhnikov
  * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  * 
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 const VSCode = require('vscode');
 const FileSystem = require("fs");
 const Path = require("path");
+const { group } = require('console');
 
-const ROOT_FOLDER = Path.normalize(VSCode.workspace.workspaceFolders[0].uri.fsPath.toLowerCase() + Path.sep);
+const ROOT_FOLDER = Path.normalize(VSCode.workspace.workspaceFolders[0].uri.fsPath);
+const SETTINGS = {
+	folderNameCase: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.nameCase"),
+	defaultHeaderFolders: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeaderFolders"),
+	defaultSourceFolders: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourceFolders"),
+	createClassFolder: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createClassFolder"),
+	createNamespaceFolder: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createNamespaceFolder"),
+	splitByFolders: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders"),
+	caseSensetiveDetection: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.caseSensetiveDetection"),
+	fileNameCase: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.nameCase"),
+	useCppHeader: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCppHeader"),
+	useCxxSource: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource"),
+	usePragma: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.usePragma"),
+	useDefine: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.useDefine")
+}
 
 /**
  * @param {VSCode.ExtensionContext} context
  */
 function activate(context) {
 	return awaiter(this, void 0, void 0, function* () {
-		let disposable = VSCode.commands.registerCommand('cpp-classes-creator.createCppClass', main);
-		context.subscriptions.push(disposable);
+		let commandContextMenu = VSCode.commands.registerCommand("cpp-classes-creator.createClassContextMenu", main);
+		let commandPopupMenu = VSCode.commands.registerCommand("cpp-classes-creator.createClassPopupMenu", main);
+
+		context.subscriptions.push(commandContextMenu);
+		context.subscriptions.push(commandPopupMenu);
 	});
 }
 
@@ -109,50 +133,81 @@ var awaiter = (this && this.__awaiter) || function (
 function main(parameters) {
 	awaiter(this, void 0, void 0, function* () {
 		let classInput = yield showClassInput();
-		const inputData = handleClassInput(classInput);
+		const classInputData = parseClassInput(clearInput(classInput, false));
 
-		if (!inputData) { return; }
-
-		let contextPath = null;
-		if (parameters && parameters.fsPath) {
-			let fsPath = parameters.fsPath.toLowerCase();
-
-			if (!FileSystem.lstatSync(fsPath).isDirectory()) {
-				fsPath = Path.dirname(fsPath);
-			}
-
-			contextPath = fsPath;
+		if (!classInputData) {
+			return;
 		}
 
-		let resultPaths = { header: null, source: null };
-		if (!contextPath) {
-			let pathInput = yield showPathInput();
-			pathInput = cleanInput(pathInput, true);
-
-			if (!pathInput) {
-				return;
+		let paths = { header: "", source: "" };
+		if (parameters && parameters.fsPath) {
+			paths.header = parameters.fsPath.replace(ROOT_FOLDER, "");
+			if (paths.header) {
+				paths.header = paths.header.slice(1);
 			}
-
-			resultPaths = parsePathInput(pathInput);
+			paths.source = paths.header;
 		}
 		else {
-			resultPaths = getPaths(contextPath);
+			let pathsInput = yield showPathInput();
+			paths = parsePathInput(clearInput(pathsInput, true));
+
+			if (!paths) {
+				return;
+			}
 		}
 
-		resultPaths = addFolders(resultPaths, inputData.namespace, inputData.class);
-		resultPaths = addFiles(resultPaths, inputData.class);
+		const projectPaths = getProjectPaths();
+		const projectNames = Object.keys(projectPaths);
 
-		resultPaths.header = applyCase(resultPaths.header);
-		resultPaths.source = applyCase(resultPaths.source);
+		let project = "";
+		if (projectNames.length > 1) {
+			const projects = projectNames.filter((element) => {
+				return paths.header.split(Path.sep)[0] === element
+					|| paths.source.split(Path.sep)[0] === element;
+			});
 
-		if (makeFolders(Path.dirname(resultPaths.header), Path.dirname(resultPaths.source))) {
+			if (projects.length) {
+				project = projects[0];
+				paths.header = paths.header.replace(project + Path.sep, "");
+				paths.source = paths.source.replace(project + Path.sep, "");
+			}
+			else {
+				let projectInput = yield showProjectInput(projectNames);
+				project = clearInput(projectInput, true);
+
+				if (!project) {
+					return;
+				}
+			}
+		}
+		else {
+			project = projectNames[0];
+		}
+
+		if (SETTINGS.splitByFolders) {
+			paths = splitByFolders(project, projectPaths[project], paths)
+		}
+
+		paths = addFolders(paths, classInputData.namespace, classInputData.class);
+		paths = addFiles(paths, classInputData.class);
+
+		paths.header = Path.normalize(Path.join(ROOT_FOLDER, project, paths.header));
+		paths.source = Path.normalize(Path.join(ROOT_FOLDER, project, paths.source));
+		console.log(paths);
+		return;
+		if (paths.header && paths.source && makeFolders(Path.dirname(paths.header), Path.dirname(paths.source))) {
 			writeFiles(
 				{
-					headerPath: resultPaths.header,
-					sourcePath: resultPaths.source,
-					headerContent: getHeader(inputData),
-					sourceContent: getSource(resultPaths.header)
+					headerPath: paths.header,
+					sourcePath: paths.source,
+					headerContent: getHeader(classInputData),
+					sourceContent: getSource(paths.header)
 				}
+			);
+		}
+		else {
+			VSCode.window.showErrorMessage(
+				"Couldn't create files.\nHeader: \"" + paths.header + "\"\nSource: \"" + paths.source + "\""
 			);
 		}
 	});
@@ -182,7 +237,23 @@ function showPathInput() {
 			{
 				ignoreFocusOut: false,
 				placeHolder: "path/to/header; path/to/source",
-				prompt: "Provide in which folders files will be created. Must be relative to the root folder."
+				prompt: "Provide in which folders files will be created. Must be relative to the root or include/source folders. Type dot to use the workspace root folder."
+			}
+		);
+	});
+}
+
+/**
+ * @param {string[]} projects
+ * @returns {string | null}
+*/
+function showProjectInput(projects) {
+	return awaiter(this, void 0, void 0, function* () {
+		return yield VSCode.window.showQuickPick(
+			projects,
+			{
+				placeHolder: "Project (folder) where to create files:",
+				canPickMany: false
 			}
 		);
 	});
@@ -206,100 +277,20 @@ function showRewriteFileInput(path) {
 
 /**
  * @param {string} input
- * @returns {{
- * namespace: string | null;
- * template: string | null;
- * parent: string | null;
- * class: string | null;
- * type: string | null;
- * } | null}
- */
-function handleClassInput(input) {
-	const inputData = parseClassInput(cleanInput(input, false));
-
-	if (typeof (inputData) == "string") {
-		VSCode.window.showErrorMessage(
-			"Wrong type provided - \"" + inputData + "\". Must be \"class\" or \"struct\"."
-		);
-		return null;
-	}
-	else if (inputData && !inputData.class) {
-		VSCode.window.showErrorMessage(
-			"Input doesn't contains definition of the \"class\" or \"struct\"."
-		);
-		return null;
-	}
-	else if (!inputData) {
-		return null;
-	}
-
-	return inputData;
-}
-
-/**
- * @param {string} contextPath
- * @returns {{
- * header: string | null;
- * source: string | null;
- * } | null}
- */
-function getPaths(contextPath) {
-	let resultPaths = {
-		header: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultHeadersFolder"),
-		source: VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.defaultSourcesFolder")
-	}
-
-	let projectPaths = {
-		header: null,
-		source: null
-	};
-
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectFolders")) {
-		projectPaths = getProjectPaths();
-	}
-
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.splitByFolders")) {
-		const folders = splitByFolders(
-			contextPath,
-			resultPaths.source ? resultPaths.header : projectPaths.header,
-			resultPaths.header ? resultPaths.source : projectPaths.source
-		);
-
-		if (folders) {
-			resultPaths.header = folders.header;
-			resultPaths.source = folders.source;
-		}
-		else {
-			resultPaths.header = contextPath;
-			resultPaths.source = contextPath;
-		}
-	}
-	else {
-		resultPaths.header = contextPath;
-		resultPaths.source = contextPath;
-	}
-
-	return resultPaths;
-}
-
-/**
- * @param {string} input
  * @param {boolean} isPath
  * @returns {string}
  */
-function cleanInput(input, isPath) {
+function clearInput(input, isPath) {
 	if (!input) {
 		return;
 	}
 
-	const regex = isPath ? /[^\w\d\s_\-\\/;]+/g : /[^\w\d\s,_:<>]+/g;
+	const regex = isPath ? /[^\w\d\s_\-\\/\.;]+/g : /[^\w\d\s,_:<>]+/g;
 
-	input = input
+	return input
 		.replace(regex, "")
 		.replace(/[\s\t]+/g, " ")
 		.trim();
-
-	return input;
 }
 
 /**
@@ -310,7 +301,7 @@ function cleanInput(input, isPath) {
  * parent: string | null;
  * class: string | null;
  * type: string | null;
- * } | string | null}
+ * } | null}
  */
 function parseClassInput(input) {
 	if (!input) { return null; }
@@ -318,7 +309,10 @@ function parseClassInput(input) {
 	let type = input.match(/^[a-z]+/)[0];
 
 	if (!(type == "class" || type == "struct")) {
-		return type;
+		VSCode.window.showErrorMessage(
+			"Wrong type provided - \"" + type + "\". Must be \"class\" or \"struct\"."
+		);
+		return null;
 	}
 	else if (input.split(" ").length < 2) {
 		return {
@@ -333,10 +327,12 @@ function parseClassInput(input) {
 	input = input.replace(type, "").trim();
 
 	let namespace = null;
-	const namespaceRegex = input.match(/([\w\d\s_]+)::/);
+	const namespaceRegex = input.match(/([\w\d\s_]+)::/g);
 	if (namespaceRegex) {
-		namespace = namespaceRegex[1].trim();
-		input = input.replace(namespaceRegex[0], "");
+		namespace = namespaceRegex.join("");
+		input = input.replace(namespace, "");
+		namespace = namespace.replace(/\s/g, "");
+		namespace = namespace.substring(0, namespace.length - 2);
 	}
 
 	let template = null;
@@ -359,8 +355,15 @@ function parseClassInput(input) {
 		class_ = classRegex[1].trim();
 	}
 
-	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => !value)) {
+	if ([namespaceRegex, templateRegex, parentRegex, classRegex].every((value) => { return !value })) {
 		class_ = input;
+	}
+
+	if (!class_) {
+		VSCode.window.showErrorMessage(
+			"Input doesn't contains definition of the \"class\" or \"struct\"."
+		);
+		return null;
 	}
 
 	return {
@@ -377,81 +380,223 @@ function parseClassInput(input) {
  * @returns {{
  * header: string | null;
  * source: string | null;
- * } | null}
+ * }}
  */
 function parsePathInput(data) {
 	if (!data) {
 		return null;
 	}
-	data = Path.normalize(data.replace(/[\s]?[\\/][\s]?/g, "/"));
 
-	const inputPaths = data.split(";");
-	let paths = {
-		header: inputPaths[0].trim(),
-		source: (inputPaths[1] ? inputPaths[1].trim() : inputPaths[0].trim()),
+	if (data.trim().toLowerCase() == ".") {
+		return {
+			header: "",
+			source: ""
+		};
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectFolders")) {
-		let projectPaths = getProjectPaths();
-		paths.header = Path.join(projectPaths.header, paths.header);
-		paths.source = Path.join(projectPaths.source, paths.source);
+	const input = Path.normalize(data).split(";");
+
+	return {
+		header: input[0].trim(),
+		source: (input[1] ? input[1].trim() : input[0].trim()),
+	};
+}
+
+/**
+ * @param {string} rootPath
+ */
+function getFolderPaths(rootPath) {
+	return FileSystem.readdirSync(rootPath)
+		.filter((name) => {
+			return FileSystem.lstatSync(Path.join(rootPath, name)).isDirectory();
+		});
+}
+
+/**
+ * @param {string[]} folders
+ * @returns {{
+ * header: string | null;
+ * source: string | null;
+ * }}
+*/
+function getSourcePaths(folders) {
+	let paths = {
+		header: "",
+		source: ""
+	}
+
+	const headerFolders = folders.filter((folder) => {
+		return SETTINGS.defaultHeaderFolders.find(
+			(element) => {
+				return SETTINGS.caseSensetiveDetection
+					? element === folder
+					: element.toLowerCase() === folder.toLowerCase()
+			}
+		);
+	});
+
+	const sourceFolders = folders.filter((folder) => {
+		return SETTINGS.defaultSourceFolders.find(
+			(element) => {
+				return SETTINGS.caseSensetiveDetection
+					? element === folder
+					: element.toLowerCase() === folder.toLowerCase()
+			}
+		);
+	});
+
+	if (headerFolders.length) {
+		paths.header = headerFolders[0];
+	}
+
+	if (sourceFolders.length) {
+		paths.source = sourceFolders[0];
+	}
+
+	return paths;
+}
+
+// /**
+//  * @returns {{
+//  * {
+//  * header: string | null;
+//  * source: string | null;
+//  * }
+//  * }}
+//  */
+function getProjectPaths() {
+	let workspacePaths = getFolderPaths(ROOT_FOLDER);
+	let sourcePaths = getSourcePaths(workspacePaths);
+
+	let projectPaths = {};
+	if (sourcePaths.header || sourcePaths.source) {
+		projectPaths["workspace"] = sourcePaths;
+	}
+
+	for (const folder of workspacePaths) {
+		sourcePaths = getSourcePaths(getFolderPaths(Path.join(ROOT_FOLDER, folder)));
+		if (sourcePaths.header || sourcePaths.source) {
+			projectPaths[folder] = sourcePaths;
+		}
+	}
+
+	return projectPaths;
+}
+
+/**
+ * @param {string} rootPath
+ * @param {{
+ * header: string | null;
+ * source: string | null;
+ * }} sourcePaths
+ * @param {{
+ * header: string | null;
+ * source: string | null;
+ * }} sourcePaths
+ * @returns {{
+ * header: string | null;
+ * source: string | null;
+ * }}
+ */
+function splitByFolders(rootPath, sourcePaths, paths) {
+	if (rootPath === null || !(sourcePaths.header || sourcePaths.source)) {
+		return sourcePaths;
+	}
+
+	if (sourcePaths.header && rootPath.includes(sourcePaths.header)) {
+		paths.source = rootPath.replace(paths.header, sourcePaths.source);
+	}
+	else if (sourcePaths.source && rootPath.includes(sourcePaths.source)) {
+		paths.header = rootPath.replace(paths.source, sourcePaths.header);
+	}
+
+	if (!paths.header && sourcePaths.header) {
+		paths.header = sourcePaths.header;
+	}
+	if (!paths.source && sourcePaths.source) {
+		paths.source = sourcePaths.source;
 	}
 
 	return paths;
 }
 
 /**
- * @returns {{
- * header: string | null;
- * source: string | null;
- * } | null}
+ * @param {string | null} path
+ * @returns {string | null}
  */
-function getProjectPaths() {
-	let projectHeadersPath = null;
-	let projectSourcesPath = null;
+function applyCase(path) {
+	if (!path) {
+		return path;
+	}
 
-	for (const folder of VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectHeadersFolder")) {
-		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
-			projectHeadersPath = Path.join(ROOT_FOLDER, folder);
-			break;
+	const isFolder = !Path.extname(path);
+	const caseName = isFolder ? SETTINGS.folderNameCase.toLowerCase() : SETTINGS.fileNameCase.toLowerCase();
+
+	if (caseName === "none") {
+		return path;
+	}
+
+	const lowerLowerRegex = "([a-z\d][_][a-z\d])";
+	const lowerUpperRegex = "([a-z\d][A-Z])";
+	const kebabRegex = lowerLowerRegex + "|" + lowerUpperRegex
+
+	const capitalize = (string) => {
+		return string.charAt(0).toUpperCase() + string.slice(1);
+	}
+	const decapitalize = (string) => {
+		return string.charAt(0).toLowerCase() + string.slice(1);
+	}
+
+	let regex = null;
+	let getReplacement = null;
+	let getTransformedCase = null;
+
+	if (caseName === "snake_case") {
+		regex = lowerUpperRegex;
+		getReplacement = (group) => {
+			return group.slice(0, 1) + "_" + group.slice(1);
+		};
+		getTransformedCase = (group) => {
+			return group.toLowerCase();
+		};
+	}
+	else if (caseName === "kebab-case") {
+		regex = kebabRegex;
+		getReplacement = (group) => {
+			return group.slice(0, 1) + "-" + group.slice(1).replace("_", "");
+		};
+		getTransformedCase = (group) => {
+			return group.toLowerCase();
+		};
+	}
+	else if (caseName === "camelCase") {
+		regex = lowerLowerRegex;
+		getReplacement = (group) => {
+			return group.slice(0, 1) + group.slice(2).toUpperCase();
+		};
+		getTransformedCase = (group) => {
+			return decapitalize(group);
+		};
+	}
+	else if (caseName === "UpperCamelCase") {
+		regex = lowerLowerRegex;
+		getReplacement = (group) => {
+			return group.slice(0, 1) + group.slice(2).toUpperCase();
+		};
+		getTransformedCase = (group) => {
+			return capitalize(group);
+		};
+	}
+
+	const match = path.match(RegExp(regex, "g"));
+	if (match) {
+		for (let i = 0; i < match.length; i++) {
+			const group = match[i];
+			path = path.replace(group, getReplacement(group));
 		}
 	}
 
-	for (const folder of VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.detectSourcesFolder")) {
-		if (FileSystem.existsSync(Path.join(ROOT_FOLDER, folder))) {
-			projectSourcesPath = Path.join(ROOT_FOLDER, folder);
-			break;
-		}
-	}
-
-	return { header: projectHeadersPath, source: projectSourcesPath };
-}
-
-/**
- * @param {string} rootPath
- * @param {string} headerPath
- * @param {string} sourcePath
- * @returns {{
- * header: string | null;
- * source: string | null;
- * } | null}
- */
-function splitByFolders(rootPath, headerPath, sourcePath) {
-	if (!rootPath) { return null; }
-
-	headerPath = headerPath ? headerPath : ROOT_FOLDER;
-	sourcePath = sourcePath ? sourcePath : ROOT_FOLDER;
-
-	if (rootPath.includes(headerPath)) {
-		let difference = rootPath.replace(headerPath, "").replace(ROOT_FOLDER, "");
-		return { header: rootPath, source: Path.join(sourcePath, difference) };
-	}
-	else if (rootPath.includes(sourcePath)) {
-		let difference = rootPath.replace(sourcePath, "").replace(ROOT_FOLDER, "");
-		return { header: Path.join(headerPath, difference), source: rootPath };
-	}
-
-	return { header: headerPath, source: sourcePath };
+	return getTransformedCase(path);
 }
 
 /**
@@ -464,24 +609,28 @@ function splitByFolders(rootPath, headerPath, sourcePath) {
  * @returns {{
  * header: string | null;
  * source: string | null;
- * } | null}
+ * }}
  */
 function addFolders(paths, namespace, class_) {
-	if (!class_ || !paths || paths && (!paths.header || !paths.source)) {
-		return null;
+	if (!class_ || !paths || paths && (paths.header === null || paths.source === null)) {
+		return paths;
 	}
 
-	if (namespace && VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createNamespaceFolder")) {
-		paths.header = paths.header.includes(namespace.toLowerCase())
-			? paths.header
-			: Path.join(paths.header, namespace);
+	if (namespace && SETTINGS.createNamespaceFolder) {
+		const namespaceFolders = namespace.split("::");
 
-		paths.source = paths.source.includes(namespace.toLowerCase())
-			? paths.source
-			: Path.join(paths.source, namespace);
+		for (const folder of namespaceFolders) {
+			if (!paths.header.toLowerCase().includes(Path.sep + folder.toLowerCase())) {
+				paths.header = Path.join(paths.header, applyCase(folder));
+			}
+
+			if (!paths.source.toLowerCase().includes(Path.sep + folder.toLowerCase())) {
+				paths.source = Path.join(paths.source, applyCase(folder));
+			}
+		}
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.createClassFolder")) {
+	if (SETTINGS.createClassFolder) {
 		paths.header = Path.join(paths.header, class_);
 		paths.source = Path.join(paths.source, class_);
 	}
@@ -501,74 +650,24 @@ function addFolders(paths, namespace, class_) {
  * } | null}
  */
 function addFiles(paths, fileName) {
-	if (!paths || paths && (!paths.header || !paths.source)) {
-		return null;
+	if (!paths || paths && (paths.header === null || paths.source === null)) {
+		return paths;
 	}
 
 	paths.header = Path.join(
 		paths.header,
-		fileName +
-		(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCppHeader")
-			? ".hpp" : ".h")
+		applyCase(
+			fileName + (SETTINGS.useCppHeader ? ".hpp" : ".h")
+		)
 	);
 	paths.source = Path.join(
 		paths.source,
-		fileName +
-		(VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.useCxxSource")
-			? ".cxx" : ".cpp")
+		applyCase(
+			fileName + (SETTINGS.useCxxSource ? ".cxx" : ".cpp")
+		)
 	);
 
 	return paths;
-}
-
-/**
- * @param {string | null} path
- * @returns {string | null}
- */
-function applyCase(path) {
-	if (!path) {
-		return null;
-	}
-
-	const filesCase = VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.file.nameCase").toLowerCase();
-	const foldersCase = VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.folder.nameCase").toLowerCase();
-
-	let file = Path.basename(path);
-	let folders = Path.dirname(path);
-
-	switch (filesCase) {
-		case "lower":
-			file = file.toLowerCase();
-			break;
-		case "upper":
-			file = file.toUpperCase();
-			break;
-		case "capitalize":
-			file = file.charAt(0).toUpperCase() + file.slice(1);
-			break;
-
-		default:
-			break;
-	}
-
-	switch (foldersCase) {
-		case "lower":
-			folders = folders.toLowerCase();
-			break;
-		case "upper":
-			folders = folders.toUpperCase();
-			break;
-		case "capitalize":
-			for (const folder of folders.split(Path.sep)) {
-				folders = folders.replace(folder, folder.charAt(0).toUpperCase() + folder.slice(1))
-			}
-			break;
-
-		default:
-			break;
-	}
-
-	return Path.join(folders, file);
 }
 
 /**
@@ -611,14 +710,14 @@ function getHeader(data) {
 		lines.push("}")
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.useDefine")) {
+	if (SETTINGS.useDefine) {
 		let classUpper = data.class.toUpperCase();
 		lines.splice(0, 0, "#ifndef " + classUpper + "_H");
 		lines.splice(1, 0, "#define " + classUpper + "_H\n\n");
 		lines.push("#endif");
 	}
 
-	if (VSCode.workspace.getConfiguration().get("C_Cpp.classesCreator.header.usePragma")) {
+	if (SETTINGS.usePragma) {
 		if (lines.indexOf("#endif") > -1) {
 			lines.splice(2, 0, "#pragma once\n\n")
 			lines[1] = lines[1].replace("\n\n", "")
@@ -656,7 +755,7 @@ function getSource(headerPath) {
  */
 function makeFolders(...paths) {
 	if (!paths || paths &&
-		(paths.length < 1 || paths.every((path) => !path))
+		(paths.length < 1 || paths.every((element) => { return !element }))
 	) {
 		return false;
 	}
@@ -685,48 +784,48 @@ function makeFolders(...paths) {
 function writeFiles(...files) {
 	return awaiter(this, void 0, void 0, function* () {
 		if (!files || files &&
-			(files.length < 1 || files.every((data) => !data))
+			(files.length < 1 || files.every((element) => { return !element }))
 		) {
 			return false;
 		}
 
-		for (const data of files) {
-			if (!data || data && !data.headerPath) {
+		for (const file of files) {
+			if (!file || file && !file.headerPath) {
 				continue;
 			}
 
 			let result;
-			if (FileSystem.existsSync(data.headerPath)) {
-				result = yield showRewriteFileInput(data.headerPath);
-			}
-			else if (FileSystem.existsSync(data.sourcePath)) {
-				result = yield showRewriteFileInput(data.headerPath);
+			if (FileSystem.existsSync(file.headerPath) || FileSystem.existsSync(file.sourcePath)) {
+				result = yield showRewriteFileInput(file.headerPath + "; " + file.sourcePath);
 			}
 
-			if (!result || result && result.toLowerCase() == "yes") {
-				FileSystem.writeFile(
-					data.headerPath,
-					data.headerContent ? data.headerContent : "",
-					function (error) {
-						if (error) {
-							VSCode.window.showErrorMessage(error.message);
-							return false;
-						}
-					}
-				);
-
-				FileSystem.writeFile(
-					data.sourcePath,
-					data.sourceContent ? data.sourceContent : "",
-					function (error) {
-						if (error) {
-							VSCode.window.showErrorMessage(error.message);
-							return false;
-						}
-					}
-				);
+			if (!result || result && result.toLowerCase() != "yes") {
+				return true;
 			}
+
+			FileSystem.writeFile(
+				file.headerPath,
+				file.headerContent ? file.headerContent : "",
+				function (error) {
+					if (error) {
+						VSCode.window.showErrorMessage(error.message);
+						return false;
+					}
+				}
+			);
+
+			FileSystem.writeFile(
+				file.sourcePath,
+				file.sourceContent ? file.sourceContent : "",
+				function (error) {
+					if (error) {
+						VSCode.window.showErrorMessage(error.message);
+						return false;
+					}
+				}
+			);
 		}
+
 		return true;
 	});
 }
