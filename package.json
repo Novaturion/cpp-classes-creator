@@ -3,7 +3,7 @@
 	"displayName": "C++ Classes Creator",
 	"description": "A better way to create C++ classes",
 	"publisher": "Novaturion",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"icon": "assets/icon.png",
 	"repository": {
 		"type": "git",
@@ -14,7 +14,7 @@
 	},
 	"license": "https://github.com/Novaturion/cpp-classes-creator/blob/main/LICENSE",
 	"engines": {
-		"vscode": "^1.56.0"
+		"vscode": "^1.75.0"
 	},
 	"keywords": [
 		"C++",
@@ -29,28 +29,30 @@
 	"categories": [
 		"Programming Languages"
 	],
-	"activationEvents": [
-		"onCommand:cpp-classes-creator.createCppClass"
-	],
 	"main": "./extension/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "cpp-classes-creator.createCppClass",
-				"title": "New C++ Class/Struct"
+				"command": "cpp-classes-creator.createClassContextMenu",
+				"title": "New C++ Class..."
+			},
+			{
+				"command": "cpp-classes-creator.createClassPopupMenu",
+				"title": "C/C++: Create New Class..."
 			}
 		],
 		"menus": {
 			"explorer/context": [
 				{
-					"group": "navigation@-1",
-					"command": "cpp-classes-creator.createCppClass"
+					"command": "cpp-classes-creator.createClassContextMenu",
+					"group": "navigation",
+					"when": "explorerResourceIsFolder"
 				}
 			]
 		},
 		"keybindings": [
 			{
-				"command": "cpp-classes-creator.createCppClass",
+				"command": "cpp-classes-creator.createClassPopupMenu",
 				"key": "shift+alt+c",
 				"when": "editorTextFocus"
 			}
@@ -72,38 +74,51 @@
 				"properties": {
 					"C_Cpp.classesCreator.folder.nameCase": {
 						"enum": [
-							"lower",
-							"UPPER",
-							"Capitalize"
+							"none",
+							"snake_case",
+							"kebab-case",
+							"camelCase",
+							"UpperCamelCase"
 						],
-						"default": "lower",
-						"description": "Which case will be applyed to folders names."
+						"default": "kebab-case",
+						"description": "Which case will be applied to folders names."
 					},
-					"C_Cpp.classesCreator.folder.defaultHeadersFolder": {
-						"type": "string",
-						"default": null,
-						"description": "Specifies the path where the class header will be created. Relative to root. Ignored if splitByFolders is false."
-					},
-					"C_Cpp.classesCreator.folder.defaultSourcesFolder": {
-						"type": "string",
-						"default": null,
-						"description": "Specifies the path where the class source will be created. Relative to root. Ignored if splitByFolders is false."
-					},
-					"C_Cpp.classesCreator.folder.detectHeadersFolder": {
-						"type": "string[]",
+					"C_Cpp.classesCreator.folder.defaultHeaderFolders": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
 						"default": [
 							"inc",
 							"include"
 						],
-						"description": "List of headers folders names that can exists in root folder."
+						"description": "List of header folder names that can exist in root folder."
 					},
-					"C_Cpp.classesCreator.folder.detectSourcesFolder": {
-						"type": "string[]",
+					"C_Cpp.classesCreator.folder.defaultSourceFolders": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
 						"default": [
 							"src",
 							"source"
 						],
-						"description": "List of source folders names that can exists in root folder."
+						"description": "List of source folder names that can exist in root folder."
+					},
+					"C_Cpp.classesCreator.folder.detectFolders": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable detection of header and source folders based on detectFoldersHeaders and detectFoldersSources lists."
+					},
+					"C_Cpp.classesCreator.folder.caseSensetiveDetection": {
+						"type": "boolean",
+						"default": false,
+						"description": "Make detection of header and source folders case-sensetive."
+					},
+					"C_Cpp.classesCreator.folder.splitByFolders": {
+						"type": "boolean",
+						"default": true,
+						"description": "Place header under defaultHeadersFolder folder and source file under defaultSourceFolder. If called from context menu header will be placed under cursor if default folders aren't specified."
 					},
 					"C_Cpp.classesCreator.folder.createClassFolder": {
 						"type": "boolean",
@@ -115,24 +130,16 @@
 						"default": true,
 						"description": "Create a folder for the namespace if doesn't exists in provided path. If splitByFolders is true create two folders for source and header files."
 					},
-					"C_Cpp.classesCreator.folder.splitByFolders": {
-						"type": "boolean",
-						"default": true,
-						"description": "Place header under defaultHeadersFolder folder and source file under defaultSourceFolder. If called from context menu header will be placed under cursor if default folders aren't specified."
-					},
-					"C_Cpp.classesCreator.folder.detectFolders": {
-						"type": "boolean",
-						"default": true,
-						"description": "Enable detection of include and source folders based on detectFoldersHeaders and detectFoldersSources lists."
-					},
 					"C_Cpp.classesCreator.file.nameCase": {
 						"enum": [
-							"lower",
-							"UPPER",
-							"Capitalize"
+							"none",
+							"snake_case",
+							"kebab-case",
+							"camelCase",
+							"UpperCamelCase"
 						],
-						"default": "lower",
-						"description": "Which case will be applyed to files names."
+						"default": "kebab-case",
+						"description": "Which case will be applied to files names."
 					},
 					"C_Cpp.classesCreator.file.useCppHeader": {
 						"type": "boolean",
