@@ -3,7 +3,7 @@
 	"displayName": "C++ Classes Creator",
 	"description": "A better way to create C++ classes",
 	"publisher": "Novaturion",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"icon": "assets/icon.png",
 	"repository": {
 		"type": "git",
