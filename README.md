@@ -8,13 +8,13 @@ This simple extension allows you to create classes or structures in a better way
 - Parse namespace, class/structure name, template and parent class/structure.<br>
 	So this input
 	```C++
-	class Containers::MyContainer<T, U> : Container, IDisposable
+	class Library::Containers::MyContainer<T, U> : Container, IDisposable
 	```
 	will be expanded to
 	```C++
 	#pragma once
 
-	namespace Containers
+	namespace Library::Containers
 	{
 		template <class T, class U>
 		class MyContainer : public Container, public IDisposable
@@ -56,7 +56,7 @@ This extension contributes the following settings:
 | `C_Cpp.classesCreator.folder.defaultSourceFolders`	| **string[]**	| *src, source*		| List of *source* folder names to check in the root folder.	|
 | `C_Cpp.classesCreator.folder.detectFolders`			| **boolean**	| *true*			| Enable detection of *header* and *source* folders based on `defaultHeaderFolders` and `defaultSourceFolders` lists.	|
 | `C_Cpp.classesCreator.folder.caseSensetiveDetection`	| **boolean**	| *true*			| Make detection of header and source folders case-sensetive.	|
-| `C_Cpp.classesCreator.folder.splitByFolders`			| **boolean**	| *true*			| Create header file in detected *header* folder and source file in detected *source* folder. If doesn't exist, the root folder will be used.	|
+| `C_Cpp.classesCreator.folder.splitByFolders`			| **boolean**	| *true*			| Create header file in detected *header* folder and source file in detected *source* folder. If one or both don't exist, the context folder will be used.	|
 | `C_Cpp.classesCreator.folder.createClassFolder`		| **boolean**	| *false*			| Create folder for the class. If `splitByFolders` is *true*, same folders will be created in *header* and *source* folders.	|
 | `C_Cpp.classesCreator.folder.createNamespaceFolder`	| **boolean**	| *true*			| Create folder for the namespace. If `splitByFolders` is *true*, same folders will be created in *header* and *source* folders.	|
 |														|				|					|	|

@@ -25,7 +25,6 @@
 const VSCode = require('vscode');
 const FileSystem = require("fs");
 const Path = require("path");
-const { group } = require('console');
 
 const ROOT_FOLDER = Path.normalize(VSCode.workspace.workspaceFolders[0].uri.fsPath);
 const SETTINGS = {
@@ -185,7 +184,7 @@ function main(parameters) {
 		}
 
 		if (SETTINGS.splitByFolders) {
-			paths = splitByFolders(project, projectPaths[project], paths)
+			paths = splitByFolders(projectPaths[project], paths)
 		}
 
 		paths = addFolders(paths, classInputData.namespace, classInputData.class);
@@ -193,17 +192,12 @@ function main(parameters) {
 
 		paths.header = Path.normalize(Path.join(ROOT_FOLDER, project, paths.header));
 		paths.source = Path.normalize(Path.join(ROOT_FOLDER, project, paths.source));
-		console.log(paths);
-		return;
-		if (paths.header && paths.source && makeFolders(Path.dirname(paths.header), Path.dirname(paths.source))) {
-			writeFiles(
-				{
-					headerPath: paths.header,
-					sourcePath: paths.source,
-					headerContent: getHeader(classInputData),
-					sourceContent: getSource(paths.header)
-				}
-			);
+
+		if (paths.header && paths.source
+			&& makeFolder(Path.dirname(paths.header))
+			&& makeFolder(Path.dirname(paths.source))) {
+			yield writeFile(paths.header, getHeader(classInputData));
+			yield writeFile(paths.source, getSource(paths.header));
 		}
 		else {
 			VSCode.window.showErrorMessage(
@@ -484,7 +478,6 @@ function getProjectPaths() {
 }
 
 /**
- * @param {string} rootPath
  * @param {{
  * header: string | null;
  * source: string | null;
@@ -498,22 +491,22 @@ function getProjectPaths() {
  * source: string | null;
  * }}
  */
-function splitByFolders(rootPath, sourcePaths, paths) {
-	if (rootPath === null || !(sourcePaths.header || sourcePaths.source)) {
-		return sourcePaths;
+function splitByFolders(sourcePaths, paths) {
+	if (!(sourcePaths.header && sourcePaths.source)) {
+		return paths;
 	}
 
-	if (sourcePaths.header && rootPath.includes(sourcePaths.header)) {
-		paths.source = rootPath.replace(paths.header, sourcePaths.source);
+	if (paths.header.includes(sourcePaths.header)) {
+		paths.source = paths.header.replace(sourcePaths.header, sourcePaths.source);
 	}
-	else if (sourcePaths.source && rootPath.includes(sourcePaths.source)) {
-		paths.header = rootPath.replace(paths.source, sourcePaths.header);
+	else if (paths.source.includes(sourcePaths.source)) {
+		paths.header = paths.source.replace(sourcePaths.source, sourcePaths.header);
 	}
 
-	if (!paths.header && sourcePaths.header) {
+	if (!paths.header) {
 		paths.header = sourcePaths.header;
 	}
-	if (!paths.source && sourcePaths.source) {
+	if (!paths.source) {
 		paths.source = sourcePaths.source;
 	}
 
@@ -696,9 +689,9 @@ function getHeader(data) {
 
 	lines = lines.concat([
 		"{",
-		"\tpublic:",
-		"\t\t" + data.class + "() = default;\n",
-		"\t\t~" + data.class + "() = default;",
+		"public:",
+		"\t" + data.class + "() = default;\n",
+		"\t~" + data.class + "() = default;",
 		"};"
 	]);
 
@@ -744,88 +737,57 @@ function getSource(headerPath) {
 	headerPath = headerPath
 		.replace(ROOT_FOLDER, "")
 		.replace(/[\\]/g, "/")
-		.replace(/[\w\d\s\t_\-]+\//, "")
+		.replace(/[\w\d\s\t_\-]+\//, "");
+
+	if (headerPath.startsWith("/")) {
+		headerPath = headerPath.slice(1);
+	}
 
 	return "#include \"" + headerPath + "\"\n";
 }
 
 /**
- * @param {string[] | null} paths
+ * @param {string | null} path
  * @returns {boolean}
  */
-function makeFolders(...paths) {
-	if (!paths || paths &&
-		(paths.length < 1 || paths.every((element) => { return !element }))
-	) {
+function makeFolder(path) {
+	if (!path) {
 		return false;
 	}
 
-	for (let path of paths) {
-		if (!path) {
-			continue;
-		}
-
-		if (!FileSystem.existsSync(path)) {
-			FileSystem.mkdirSync(path, { recursive: true });
-		}
+	if (!FileSystem.existsSync(path)) {
+		FileSystem.mkdirSync(path, { recursive: true });
 	}
+
 	return true;
 }
 
 /**
- * @param {{
- * headerPath: string | null;
- * sourcePath: string | null;
- * headerContent: string | null;
- * sourceContent: string | null;
- * }[] | null[] | null} files
+ * @param {string | null} path
+ * @param {string | null} content
  * @returns {boolean}
  */
-function writeFiles(...files) {
+function writeFile(path, content) {
 	return awaiter(this, void 0, void 0, function* () {
-		if (!files || files &&
-			(files.length < 1 || files.every((element) => { return !element }))
-		) {
+		if (!path) {
 			return false;
 		}
 
-		for (const file of files) {
-			if (!file || file && !file.headerPath) {
-				continue;
-			}
-
-			let result;
-			if (FileSystem.existsSync(file.headerPath) || FileSystem.existsSync(file.sourcePath)) {
-				result = yield showRewriteFileInput(file.headerPath + "; " + file.sourcePath);
-			}
-
-			if (!result || result && result.toLowerCase() != "yes") {
-				return true;
-			}
-
-			FileSystem.writeFile(
-				file.headerPath,
-				file.headerContent ? file.headerContent : "",
-				function (error) {
-					if (error) {
-						VSCode.window.showErrorMessage(error.message);
-						return false;
-					}
-				}
-			);
-
-			FileSystem.writeFile(
-				file.sourcePath,
-				file.sourceContent ? file.sourceContent : "",
-				function (error) {
-					if (error) {
-						VSCode.window.showErrorMessage(error.message);
-						return false;
-					}
-				}
-			);
+		let isRewriteAllowed = null;
+		if (FileSystem.existsSync(path)) {
+			isRewriteAllowed = yield showRewriteFileInput(path);
 		}
 
-		return true;
+		if (isRewriteAllowed && isRewriteAllowed.toLowerCase() != "yes") {
+			return true;
+		}
+
+		let isErrorOccured = false;
+		FileSystem.writeFileSync(
+			path,
+			content ? content : ""
+		);
+
+		return isErrorOccured;
 	});
 }
