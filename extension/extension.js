@@ -523,7 +523,7 @@ function applyCase(path) {
 	}
 
 	const isFolder = !Path.extname(path);
-	const caseName = isFolder ? SETTINGS.folderNameCase.toLowerCase() : SETTINGS.fileNameCase.toLowerCase();
+	const caseName = isFolder ? SETTINGS.folderNameCase : SETTINGS.fileNameCase;
 
 	if (caseName === "none") {
 		return path;
